@@ -1,5 +1,10 @@
 import turtle as t
-from random import random
+import enum
+
+#CONSTANTS
+vertexMarker=enum.Enum("vertexMarker", ["End"])
+CURVEPOINTS=100
+
 
 def setup():
     t.ht()#hide turtle
@@ -23,24 +28,75 @@ def line(start, end, colour=(0,0,0), width=1):
 
 #line((0,0),(100,100))
 
-def datatable(size, headers, data=None):
-    CELLWIDTH=100
-    CELLHEIGHT=20
-    columns,rows=size
+def plotPolygon(vertices):
+    """
+    plots polygon, takes in a list of vertices
+    """
+    t.pu()
+    t.goto(*vertices[0])
+    t.pd()
+    for vertex in vertices:
+        #if line vertex
+        if len(vertex)==2:
+            t.color("blue")
+            t.goto(*vertex)
+            t.dot("black")
 
-t.tracer(0, 0)
-for i in range (100):
-    line((i,i),((i**2)%100,100))
+        #if curve line
+        elif len(vertex)==6:
+            #get start point
+            sx,sy=t.position()
 
-t.update()
+            #plot guidelines
+            for i in range(3):
+                t.color("red")
+                t.goto(*vertex[i*2:i*2+2])
+                #plot the dots, only red for spline guidelines
+                if i!=2:
+                    t.dot("red")
+                else:
+                    t.dot("black")
+            
+            #plot curve
+            t.pu()
+            t.color("light green")
+            t.goto(sx,sy)
+            t.pd()
+            for i in range(CURVEPOINTS+1):
+                p = i/CURVEPOINTS
+                x = sx*(1-p)**3 + 3*vertex[0]*p*(1-p)**2 + 3*vertex[2]*p**2*(1-p) + vertex[4]*p**3
+                y = sy*(1-p)**3 + 3*vertex[1]*p*(1-p)**2 + 3*vertex[3]*p**2*(1-p) + vertex[5]*p**3
+                t.goto(x, y)
+
+        # if return to start
+        elif len(vertex)==1:
+            if vertex[0]==vertexMarker.End:
+                t.color("blue")
+                t.goto(*vertices[0])
+
+def newPolygon():
+    """
+    Prompts user to create a new polygon
+    """
+    #start with a simple square
+    vertices=[(0,0),(100,0,100,100,0,100),(vertexMarker.End,)]
+    plotPolygon(vertices)
+
+#t.tracer(0, 0)
+newPolygon()
+#t.update()
+
+def clickhandler(x,y):
+    print(x,y)
+
+t.onscreenclick(clickhandler)
+
+def clickhandler():
+    print("cick")
+
+t.onclick(clickhandler,1)
 
 
 
 
-
-
-
-
-
-
-t.done()
+t.mainloop()
