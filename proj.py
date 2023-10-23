@@ -5,13 +5,14 @@ import enum
 vertexMarker=enum.Enum("vertexMarker", ["End"])
 CURVEPOINTS=100
 
-
 def setup():
+    global sc
     t.ht()#hide turtle
     t.speed(0)#max speed
     t.delay(0)
     t.setup(width=1.0, height=1.0, startx=None, starty=None)#full screen, set origin to center
     t.title("MA1008 mini project")#Change window title
+    sc=t.getscreen()
 setup()
 
 def line(start, end, colour=(0,0,0), width=1):
@@ -25,7 +26,6 @@ def line(start, end, colour=(0,0,0), width=1):
     t.goto(*end)
     t.width(oldwidth)
     t.pencolor(oldcol)
-
 #line((0,0),(100,100))
 
 def plotPolygon(vertices):
@@ -79,24 +79,33 @@ def newPolygon():
     Prompts user to create a new polygon
     """
     #start with a simple square
-    vertices=[(0,0),(100,0,100,100,0,100),(vertexMarker.End,)]
+    vertices=[(0,0),(100,0,100,100,0,100),(-100,100),(-100,0),(vertexMarker.End,)]
     plotPolygon(vertices)
 
-#t.tracer(0, 0)
+t.tracer(0, 0)
 newPolygon()
-#t.update()
+t.update()
+
+
 
 def clickhandler(x,y):
     print(x,y)
 
-t.onscreenclick(clickhandler)
+sc.onclick(clickhandler)
 
-def clickhandler():
-    print("cick")
+def handler(*params):
+    print("handler")
 
-t.onclick(clickhandler,1)
-
-
+t.ondrag(handler)
 
 
+
+
+
+
+
+
+t.listen()
+sc.listen()
 t.mainloop()
+sc.mainloop()
