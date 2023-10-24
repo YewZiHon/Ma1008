@@ -1,9 +1,17 @@
 import turtle as t
 import enum
+import math
 
 #CONSTANTS
 vertexMarker=enum.Enum("vertexMarker", ["End"])
 CURVEPOINTS=100
+CLOSE_TO_POINT=8#threshold to detect a click on a point
+
+#globals
+g_new_vertices=[]
+g_new_handle_vertices=[]
+g_new_selected_point=-1
+
 
 def setup():
     global sc
@@ -73,28 +81,72 @@ def plotPolygon(vertices):
             if vertex[0]==vertexMarker.End:
                 t.color("blue")
                 t.goto(*vertices[0])
+        
 
 def newPolygon():
     """
     Prompts user to create a new polygon
     """
+    global g_new_vertices
     #start with a simple square
-    vertices=[(0,0),(100,0,100,100,0,100),(-100,100),(-100,0),(vertexMarker.End,)]
-    plotPolygon(vertices)
+    g_new_vertices=[(0,0),(100,0,100,100,0,100),(-100,100),(-100,0),(vertexMarker.End,)]
+
+    plotPolygon(g_new_vertices)
 
 t.tracer(0, 0)
 newPolygon()
 t.update()
 
-
-
 def clickhandler(x,y):
-    print(x,y)
+    global g_new_vertices, g_new_selected_point,g_new_handle_vertices
+    g_new_handle_vertices=g_new_vertices.copy()
+    distances=[]
+
+    #add control points
+    for i in range(len(g_new_vertices)):
+        #if vertex
+        if len(g_new_vertices[i])==6:
+            g_new_handle_vertices.append(g_new_vertices[i][0:2]+(i,))
+            g_new_handle_vertices.append(g_new_vertices[i][2:4]+(i,))
+
+    #find closest vertex
+    for vertex in g_new_handle_vertices:
+        #find distance
+        #for line point
+        if len(vertex)==2:
+            distances.append(math.sqrt((x-vertex[0])**2+(y-vertex[1])**2))
+        #for curve points
+        elif len(vertex)==6:
+            distances.append(math.sqrt((x-vertex[4])**2+(y-vertex[5])**2))
+        elif len(vertex)==3:
+            distances.append(math.sqrt((x-vertex[1])**2+(y-vertex[2])**2))
+    #if clicked point is close to a point
+    if min(distances)<CLOSE_TO_POINT:
+        t.pu()
+        t.st()
+        t.shape("circle")
+        t.goto(*g_new_handle_vertices[distances.index(min(distances))][0:2])
+        t.update()
+        g_new_selected_point=distances.index(min(distances))
+    #if not close escape
+    else:
+        g_new_selected_point=-1
+        t.ht()
+        t.update()
 
 sc.onclick(clickhandler)
 
-def handler(*params):
-    print("handler")
+def handler(*coords):
+    global g_new_vertices, g_new_selected_point
+    print("handler", g_new_selected_point,g_new_selected_point!=-1)
+    if g_new_selected_point!=-1:
+        g_new_vertices[g_new_selected_point]=coords
+        print(*coords,g_new_vertices,(coords,))
+        t.reset()
+        plotPolygon(g_new_vertices)
+        t.pu()
+        t.goto(*coords)
+        t.update()
 
 t.ondrag(handler)
 
