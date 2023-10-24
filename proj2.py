@@ -52,7 +52,6 @@ def plotPolygon(vertices):
             t.color("red")
             t.goto(*vertex[1:])
             t.dot("red")
-            print(vertex[1:])
             points.extend(vertex[1:])
 
         elif vertex[0]==vertexMarker.curveEnd:
@@ -136,44 +135,37 @@ def clickhandler_addpoint(x,y):
     for line in lines:
         x1,y1,x2,y2,_=line
         distances.append(abs((x2-x1)*(y1-y)-(x1-x)*(y2-y1))/math.sqrt((x2-x1)**2+(y2-y1)**2))
-    print(distances)
+    #print(distances)
 
     #if clicked point is close to a line
     if min(distances)<CLOSE_TO_POINT:
+        print("dist",min(distances))
         closest_line=lines[distances.index(min(distances))]
         print(closest_line)
-        #calculate closest point on the line
         x1,y1,x2,y2,targetIndex=closest_line
-        
-        #if horizontal line
-        if y1==y2:
-            ly=y1
-            lx=x
-        #if verticle line
-        elif x1==x2:
-            lx=x1
-            ly=y
-            
-        else:
-            m1=(y1-y2)/(x1-x2)
-            m2=-1/m1
-            lx=(m1*x1-m2*x-y1+y)/(m1-m2)
-            ly=m2*(lx-x)+y
-        print(x,y,lx,ly)
-        g_new_vertices.insert(targetIndex, (vertexMarker.line,lx,ly))
-        plotPolygon(g_new_vertices)
-        clickhandler_movepoint(lx,ly)
-        t.update()
 
-
-
-
-
-
-
-
-
-
+        #check that the point is actually on the line and not a false point after the end of the line
+        if x1<=x<=x2 or x1>=x>=x2 and y1<=y<=y2 or y1>=y>=y2:
+            #calculate closest point on the line
+            #if horizontal line
+            if y1==y2:
+                ly=y1
+                lx=x
+            #if verticle line
+            elif x1==x2:
+                lx=x1
+                ly=y
+                
+            else:
+                m1=(y1-y2)/(x1-x2)
+                m2=-1/m1
+                lx=(m1*x1-m2*x-y1+y)/(m1-m2)
+                ly=m2*(lx-x)+y
+            print(x,y,lx,ly)
+            g_new_vertices.insert(targetIndex, (vertexMarker.line,lx,ly))
+            plotPolygon(g_new_vertices)
+            clickhandler_movepoint(lx,ly)
+            t.update()
 
 sc.onclick(clickhandler_addpoint,btn=3)
 
