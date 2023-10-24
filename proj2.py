@@ -143,7 +143,35 @@ def clickhandler_addpoint(x,y):
         closest_line=lines[distances.index(min(distances))]
         print(closest_line)
         #calculate closest point on the line
+        x1,y1,x2,y2,targetIndex=closest_line
         
+        #if horizontal line
+        if y1==y2:
+            ly=y1
+            lx=x
+        #if verticle line
+        elif x1==x2:
+            lx=x1
+            ly=y
+            
+        else:
+            m1=(y1-y2)/(x1-x2)
+            m2=-1/m1
+            lx=(m1*x1-m2*x-y1+y)/(m1-m2)
+            ly=m2*(lx-x)+y
+        print(x,y,lx,ly)
+        g_new_vertices.insert(targetIndex, (vertexMarker.line,lx,ly))
+        plotPolygon(g_new_vertices)
+        clickhandler_movepoint(lx,ly)
+        t.update()
+
+
+
+
+
+
+
+
 
 
 
