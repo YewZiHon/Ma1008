@@ -11,7 +11,6 @@ CLOSE_TO_POINT=8#threshold to detect a click on a point
 g_new_vertices=[]
 g_new_selected_point=-1
 
-
 def setup():
     global sc
     t.ht()#hide turtle
@@ -21,7 +20,6 @@ def setup():
     t.title("MA1008 mini project")#Change window title
     sc=t.getscreen()
     t.tracer(0, 0)
-setup()
 
 def plotPolygon(vertices):
     """
@@ -52,7 +50,6 @@ def plotPolygon(vertices):
             t.color("red")
             t.goto(*vertex[1:])
             t.dot("red")
-            print(vertex[1:])
             points.extend(vertex[1:])
 
         elif vertex[0]==vertexMarker.curveEnd:
@@ -86,8 +83,9 @@ def newPolygon():
     g_new_vertices=[(vertexMarker.line,0,0),(vertexMarker.curve0,100,0),(vertexMarker.curve1,100,100),(vertexMarker.curveEnd,0,100),(vertexMarker.line,-150,100),(vertexMarker.line,-150,0),(vertexMarker.End,)]
     plotPolygon(g_new_vertices)
     t.update() 
-newPolygon()
 
+
+#rewrite chunk below
 def clickhandler_movepoint(x,y):
     global g_new_vertices, g_new_selected_point
     distances=[]
@@ -109,8 +107,6 @@ def clickhandler_movepoint(x,y):
         g_new_selected_point=-1
         t.ht()
         t.update()
-
-sc.onclick(clickhandler_movepoint,btn=1)
 
 def clickhandler_addpoint(x,y):
     global g_new_vertices
@@ -165,19 +161,6 @@ def clickhandler_addpoint(x,y):
         clickhandler_movepoint(lx,ly)
         t.update()
 
-
-
-
-
-
-
-
-
-
-
-sc.onclick(clickhandler_addpoint,btn=3)
-
-
 def handler(*coords):
     global g_new_vertices, g_new_selected_point
     print("handler", g_new_selected_point,g_new_selected_point!=-1)
@@ -191,8 +174,11 @@ def handler(*coords):
         t.goto(*coords)
         t.update()
 
+setup()
+newPolygon()
+sc.onclick(clickhandler_movepoint,btn=1)
+sc.onclick(clickhandler_addpoint,btn=3)
 t.ondrag(handler)
-
 
 t.listen()
 sc.listen()
