@@ -72,6 +72,7 @@ def plotPolygon(vertices):
         elif vertex[0]==vertexMarker.End:
             t.color("blue")
             t.goto(*vertices[0][1:])
+        #t.write(vertex)
        
 
 def newPolygon():
@@ -85,7 +86,6 @@ def newPolygon():
     t.update() 
 
 
-#rewrite chunk below
 def clickhandler_movepoint(x,y):
     global g_new_vertices, g_new_selected_point
     distances=[]
@@ -108,9 +108,8 @@ def clickhandler_movepoint(x,y):
         t.ht()
         t.update()
 
-def clickhandler_addpoint(x,y):
+def getClosestLine(x,y):
     global g_new_vertices
-
     #get a list of valid lines
     lines=[]
     prevlineType=None
@@ -132,12 +131,18 @@ def clickhandler_addpoint(x,y):
     for line in lines:
         x1,y1,x2,y2,_=line
         distances.append(abs((x2-x1)*(y1-y)-(x1-x)*(y2-y1))/math.sqrt((x2-x1)**2+(y2-y1)**2))
-    print(distances)
+    closestLine = lines[distances.index(min(distances))]
+
+    return distances, closestLine
+
+def clickhandler_addpoint(x,y):
+    global g_new_vertices
+
+    distances,closest_line=getClosestLine(x,y)
 
     #if clicked point is close to a line
     if min(distances)<CLOSE_TO_POINT:
-        closest_line=lines[distances.index(min(distances))]
-        print(closest_line)
+        #print(closest_line)
         #calculate closest point on the line
         x1,y1,x2,y2,targetIndex=closest_line
         
@@ -155,30 +160,79 @@ def clickhandler_addpoint(x,y):
             m2=-1/m1
             lx=(m1*x1-m2*x-y1+y)/(m1-m2)
             ly=m2*(lx-x)+y
-        print(x,y,lx,ly)
+        #print(x,y,lx,ly)
         g_new_vertices.insert(targetIndex, (vertexMarker.line,lx,ly))
         plotPolygon(g_new_vertices)
         clickhandler_movepoint(lx,ly)
         t.update()
 
-def handler(*coords):
+def redraw():
+    global g_new_vertices
+    t.reset()
+    plotPolygon(g_new_vertices)
+    t.ht()
+    t.update()
+
+def ondraghandler(*coords):
     global g_new_vertices, g_new_selected_point
-    print("handler", g_new_selected_point,g_new_selected_point!=-1)
+    #print("handler", g_new_selected_point,g_new_selected_point!=-1)
     if g_new_selected_point!=-1:
-        print(g_new_vertices[g_new_selected_point][0],coords)
+
+        #print(g_new_vertices[g_new_selected_point][0],coords)
         g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],)+coords
-        print(*coords,g_new_vertices,(coords,))
-        t.reset()
-        plotPolygon(g_new_vertices)
+        #print(*coords,g_new_vertices,(coords,))
         t.pu()
         t.goto(*coords)
-        t.update()
+        redraw()
+
+def delPointhandler():
+    global g_new_vertices, g_new_selected_point
+
+    if g_new_selected_point!=-1 and g_new_vertices[g_new_selected_point][0]==vertexMarker.line and g_new_vertices[g_new_selected_point+1][0]==vertexMarker.line or g_new_vertices[g_new_selected_point+1][0]==vertexMarker.End:#if point is selected
+        g_new_vertices.pop(g_new_selected_point)#remove polygon
+        #redraw
+        t.ht()
+        redraw()
+
+def editPoint():
+    global g_new_vertices, g_new_selected_point
+
+    if g_new_selected_point!=-1:
+        newCoords = sc.textinput("Edit Point", "Enter new coordinates X,y:")
+        sc.listen()#reclaim listener after textinput claimed handler
+        if newCoords:
+            try:
+                newx,newy = newCoords.split(',')
+                g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],int(newx),int(newy))
+                print(g_new_vertices)
+                redraw()
+            except:
+                t.ht()
+                t.goto(-300,-300)
+                t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")
+                t.update()
+
+def lineTOSpline():
+    pass
+
+def splineToLine():
+    pass
+
+def splineHandler(*coords):
+    
+    _, closestLine =  getClosestLine(*coords)
+    print(closestLine)
+    
 
 setup()
 newPolygon()
 sc.onclick(clickhandler_movepoint,btn=1)
 sc.onclick(clickhandler_addpoint,btn=3)
-t.ondrag(handler)
+t.ondrag(ondraghandler)
+sc.onkeypress(delPointhandler,'Delete')
+sc.onkeypress(editPoint,'e')
+sc.onclick(splineHandler,btn=2)
+
 
 t.listen()
 sc.listen()
