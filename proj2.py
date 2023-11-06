@@ -6,10 +6,12 @@ import math
 vertexMarker=enum.Enum("vertexMarker", ["line","curve0","curve1","curveEnd","End"])
 CURVEPOINTS=100
 CLOSE_TO_POINT=8#threshold to detect a click on a point
+GRIDSIZE=50
 
 #globals
 g_new_vertices=[]
 g_new_selected_point=-1
+g_draw_grid_flag=False
 
 def setup():
     global sc
@@ -166,9 +168,33 @@ def clickhandler_addpoint(x,y):
         clickhandler_movepoint(lx,ly)
         t.update()
 
+def drawGrid():
+    y=sc.window_height()
+    x=sc.window_width()
+    x/=2
+    y/=2
+    x_step=int(x//GRIDSIZE*GRIDSIZE)
+    y_step=int(y//GRIDSIZE*GRIDSIZE)
+    t.color("#cfcfcf")
+    t.width(1)
+    t.pu()
+    for linex in range(-x_step, x_step+1, GRIDSIZE):
+        t.goto(linex,-y)
+        t.pd()
+        t.goto(linex,y)
+        t.pu()
+
+    for liney in range(-y_step, y_step+1, GRIDSIZE):
+        t.goto(-x,liney)
+        t.pd()
+        t.goto(x,liney)
+        t.pu()  
+
 def redraw():
-    global g_new_vertices
+    global g_new_vertices, g_draw_grid_flag
     t.reset()
+    if g_draw_grid_flag:
+        drawGrid()
     plotPolygon(g_new_vertices)
     t.ht()
     t.update()
@@ -212,7 +238,7 @@ def editPoint():
                 t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")
                 t.update()
 
-def lineTOSpline():
+def lineToSpline():
     pass
 
 def splineToLine():
@@ -223,16 +249,21 @@ def splineHandler(*coords):
     _, closestLine =  getClosestLine(*coords)
     print(closestLine)
     
+def editPoint():
+    global g_draw_grid_flag
+    g_draw_grid_flag= not g_draw_grid_flag
+    redraw()
 
 setup()
 newPolygon()
+
 sc.onclick(clickhandler_movepoint,btn=1)
 sc.onclick(clickhandler_addpoint,btn=3)
 t.ondrag(ondraghandler)
 sc.onkeypress(delPointhandler,'Delete')
 sc.onkeypress(editPoint,'e')
 sc.onclick(splineHandler,btn=2)
-
+sc.onkeypress(editPoint,'g')
 
 t.listen()
 sc.listen()
