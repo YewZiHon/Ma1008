@@ -76,7 +76,6 @@ def plotPolygon(vertices):
             t.goto(*vertices[0][1:])
         #t.write(vertex)
        
-
 def newPolygon():
     """
     Prompts user to create a new polygon
@@ -86,7 +85,6 @@ def newPolygon():
     g_new_vertices=[(vertexMarker.line,0,0),(vertexMarker.curve0,100,0),(vertexMarker.curve1,100,100),(vertexMarker.curveEnd,0,100),(vertexMarker.line,-150,100),(vertexMarker.line,-150,0),(vertexMarker.End,)]
     plotPolygon(g_new_vertices)
     t.update() 
-
 
 def clickhandler_movepoint(x,y):
     global g_new_vertices, g_new_selected_point
@@ -201,12 +199,13 @@ def redraw():
 
 def ondraghandler(*coords):
     global g_new_vertices, g_new_selected_point
-    #print("handler", g_new_selected_point,g_new_selected_point!=-1)
-    if g_new_selected_point!=-1:
 
-        #print(g_new_vertices[g_new_selected_point][0],coords)
+    #snap to grid
+    if g_draw_grid_flag:
+        coords=int(round(coords[0]/GRIDSIZE)*GRIDSIZE),int(round(coords[1]/GRIDSIZE)*GRIDSIZE)
+
+    if g_new_selected_point!=-1:
         g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],)+coords
-        #print(*coords,g_new_vertices,(coords,))
         t.pu()
         t.goto(*coords)
         redraw()
@@ -249,7 +248,7 @@ def splineHandler(*coords):
     _, closestLine =  getClosestLine(*coords)
     print(closestLine)
     
-def editPoint():
+def toggleGrid():
     global g_draw_grid_flag
     g_draw_grid_flag= not g_draw_grid_flag
     redraw()
@@ -263,7 +262,7 @@ t.ondrag(ondraghandler)
 sc.onkeypress(delPointhandler,'Delete')
 sc.onkeypress(editPoint,'e')
 sc.onclick(splineHandler,btn=2)
-sc.onkeypress(editPoint,'g')
+sc.onkeypress(toggleGrid,'g')
 
 t.listen()
 sc.listen()
