@@ -104,14 +104,15 @@ def newPolygon():
     """
     Prompts user to create a new polygon
     """
-    global g_new_vertices
+    global g_new_vertices, g_new_transformation
     #start with a simple square
     g_new_vertices=[(vertexMarker_line,0,0),(vertexMarker_curve0,100,0),(vertexMarker_curve1,100,100),(vertexMarker_curveEnd,0,100),(vertexMarker_line,-150,100),(vertexMarker_line,-150,0),(vertexMarker_End,)]
+    g_new_transformation=[5, 0,0, 60, 100, 100, 0, 0, "None","Blue","red"]
     plotPolygon(g_new_vertices)
     t.update() 
 
 def clickhandler_movepoint(x,y):
-    global g_new_vertices, g_new_selected_point, g_edit_mode, g_table_bounds
+    global g_new_vertices, g_new_selected_point, g_edit_mode, g_table_bounds, g_new_transformation
     
     if g_edit_mode==editMode_point_edit:
         distances=[]
@@ -139,7 +140,6 @@ def clickhandler_movepoint(x,y):
             tableIndex=int((y+ymax)//inc-ymax*2/inc)*-1-1#calculate cell clicked, flip, invert and offset range to be within 0 to 10
 
             #edit table value
-            g_new_transformation
 
             #if pattern count
             if tableIndex==0:
@@ -150,14 +150,128 @@ def clickhandler_movepoint(x,y):
                         if newPatternCount is None:
                             break
                         newPatternCount=int(newPatternCount)
+                        if newPatternCount<1 or newPatternCount>10:
+                            raise ValueError
                         break
                     except ValueError:
-                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer:")
+                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer between 1 and 10:")
                         sc.listen()#reclaim listener after textinput claimed handler
-
                 if newPatternCount is not None:
                     g_new_transformation[tableIndex]=newPatternCount
+
+            #if transform
+            elif tableIndex==1 or tableIndex==2:
+                newTransform = sc.textinput("Transform", "Enter new transformation:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newTransform is None:
+                            break
+                        newTransform=int(newTransform)
+                        if newTransform<-1000 or newTransform>1000:
+                            raise ValueError
+                        break
+                    except ValueError:
+                        newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -1000 and 1000:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+                if newTransform is not None:
+                    g_new_transformation[tableIndex]=newTransform
+
+            #if rotate
+            elif tableIndex==3:
+                newrotate = sc.textinput("Rotate", "Enter new rotation:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newrotate is None:
+                            break
+                        newrotate=int(newrotate)
+                        if newrotate<-360 or newrotate>360:
+                            raise ValueError
+                        break
+                    except ValueError:
+                        newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+                if newrotate is not None:
+                    g_new_transformation[tableIndex]=newrotate
+
+            #if scale
+            elif tableIndex==4 or tableIndex==5:
+                newScale = sc.textinput("Scale", "Enter new scale:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newScale is None:
+                            break
+                        newScale=int(newScale)
+                        if newScale<1 or newScale>1000:
+                            raise ValueError
+                        break
+                    except ValueError:
+                        newScale = sc.textinput("Scale", "Enter new scale, please enter an integer between 1 and 1000:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+                if newScale is not None:
+                    g_new_transformation[tableIndex]=newScale
+            
+            #if shear
+            elif tableIndex==6 or tableIndex==7:
+                newShear = sc.textinput("Shear", "Enter new shear:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newShear is None:
+                            break
+                        newShear=int(newShear)
+                        if newShear<-200 or newShear>200:
+                            raise ValueError
+                        break
+                    except ValueError:
+                        newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -200 and 200:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+                if newShear is not None:
+                    g_new_transformation[tableIndex]=newShear
+
+            #if rotation
+            elif tableIndex==8:
+                newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,None):")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    if newReflection=='Y' or 'y':
+                        newReflection='Y'
+                        break
+                    elif newReflection=='X' or 'x':
+                        newReflection='X'
+                        break
+                    elif newReflection.upper()=="NONE":
+                        newReflection='None'
+                        break
+                    elif newReflection == None:
+                        break
+                    newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y or None:")
+                    sc.listen()#reclaim listener after textinput claimed handler
+                if newReflection is not None:
+                    g_new_transformation[tableIndex]=newReflection
+            #if colour change
+            elif tableIndex==9 or tableIndex==10:
+                newcolour = sc.textinput("Colour", "Enter new colour:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newcolour==None:
+                            pass
+                        #if line colour
+                        elif tableIndex==9:
+                            t.pencolor(newcolour)        
+                        else:
+                            t.fillcolor(newcolour)
+                        break
+                    except:
+                        newcolour = sc.textinput("Colour", "Enter new colour, close this prompt and see help(h) for valid colours:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+                if newcolour is not None:
+                    g_new_transformation[tableIndex]=newcolour
             redraw()
+
 def getClosestLine(x,y):
     global g_new_vertices
     #get a list of valid lines
@@ -297,7 +411,7 @@ def drawTransformationTable(tabledata):
     g_table_bounds=[xpoint, ypoint, CELL_HEIGHT]
 
 def redraw():
-    global g_new_vertices, g_draw_grid_flag, g_edit_mode
+    global g_new_vertices, g_draw_grid_flag, g_edit_mode, g_new_transformation
     t.reset()
     if g_edit_mode==editMode_point_edit:
         if g_draw_grid_flag:
@@ -306,7 +420,6 @@ def redraw():
         t.ht()
     
     if g_edit_mode==editMode_transformations:
-        g_new_transformation=[5, 0,0, 60, 100, 100, 0, 0, "None","Blue","red"]
         drawTransformationTable(g_new_transformation)
         t.ht()
 
