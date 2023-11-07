@@ -1,9 +1,18 @@
 import turtle as t
-import enum
 import math
 
 #CONSTANTS
-vertexMarker=enum.Enum("vertexMarker", ["line","curve0","curve1","curveEnd","End"])
+vertexMarker_line = "line"
+vertexMarker_curve0 = "curve0"
+vertexMarker_curve1 = "curve1"
+vertexMarker_curveEnd = "curveEnd"
+vertexMarker_End = "End"
+
+editMode_point_edit = "point_edit"
+editMode_transformations = "transformations"
+editMode_preview_transformations = "preview_transformations"
+editMode_show_result="show_result"
+
 CURVEPOINTS=100
 CLOSE_TO_POINT=8#threshold to detect a click on a point
 GRIDSIZE=50
@@ -12,6 +21,10 @@ GRIDSIZE=50
 g_new_vertices=[]
 g_new_selected_point=-1
 g_draw_grid_flag=False
+g_edit_mode=editMode_point_edit
+g_table_bounds=[]#x bound, y bound, y increment
+g_new_transformation=[]
+g_all_data=[]
 
 def setup():
     global sc
@@ -23,7 +36,7 @@ def setup():
     sc=t.getscreen()
     t.tracer(0, 0)
 
-def plotPolygon(vertices):
+def plotPolygon(vertices, line="blue", fill=None):
     """
     plots polygon, takes in a list of vertices
     """
@@ -32,36 +45,45 @@ def plotPolygon(vertices):
     t.pd()
     sx,sy=0,0
     points=[]
+    if fill is not None:
+        t.fillcolor(fill)
+        t.begin_fill()
+    else:
+        t.color("blue")
     for vertex in vertices:
         #if line vertex
-        if vertex[0]==vertexMarker.line:
-            t.color("blue")
+        if vertex[0]==vertexMarker_line:
+            t.pencolor(line)
             t.goto(*vertex[1:])
-            t.dot("black")
+            if fill is None:
+                t.dot("black")
 
         #if curve line
-        elif vertex[0]==vertexMarker.curve0:
+        elif vertex[0]==vertexMarker_curve0:
             #get start point
             sx,sy=t.position()
-            t.color("red")
-            t.goto(*vertex[1:])
-            t.dot("red")
+            if fill is None:
+                t.pencolor("red")
+                t.goto(*vertex[1:])
+                t.dot("red")
             points=[*vertex[1:]]
 
-        elif vertex[0]==vertexMarker.curve1:
-            t.color("red")
-            t.goto(*vertex[1:])
-            t.dot("red")
+        elif vertex[0]==vertexMarker_curve1:
+            if fill is None:
+                t.pencolor("red")
+                t.goto(*vertex[1:])
+                t.dot("red")
             points.extend(vertex[1:])
 
-        elif vertex[0]==vertexMarker.curveEnd:
-            t.color("red")
-            t.goto(*vertex[1:])
-            t.dot("black")  
+        elif vertex[0]==vertexMarker_curveEnd:
+            if fill is None:
+                t.pencolor("red")
+                t.goto(*vertex[1:])
+                t.dot("black")  
             points.extend(vertex[1:]) 
             #plot curve
             t.pu()
-            t.color("light green")
+            t.pencolor(line)
             t.goto(sx,sy)
             t.pd()
             for i in range(CURVEPOINTS+1):
@@ -71,10 +93,12 @@ def plotPolygon(vertices):
                 t.goto(x, y)
 
         # if return to start
-        elif vertex[0]==vertexMarker.End:
-            t.color("blue")
+        elif vertex[0]==vertexMarker_End:
+            t.pencolor("blue")
             t.goto(*vertices[0][1:])
         #t.write(vertex)
+    if fill is not None:
+        t.end_fill()
        
 def newPolygon():
     """
@@ -82,32 +106,58 @@ def newPolygon():
     """
     global g_new_vertices
     #start with a simple square
-    g_new_vertices=[(vertexMarker.line,0,0),(vertexMarker.curve0,100,0),(vertexMarker.curve1,100,100),(vertexMarker.curveEnd,0,100),(vertexMarker.line,-150,100),(vertexMarker.line,-150,0),(vertexMarker.End,)]
+    g_new_vertices=[(vertexMarker_line,0,0),(vertexMarker_curve0,100,0),(vertexMarker_curve1,100,100),(vertexMarker_curveEnd,0,100),(vertexMarker_line,-150,100),(vertexMarker_line,-150,0),(vertexMarker_End,)]
     plotPolygon(g_new_vertices)
     t.update() 
 
 def clickhandler_movepoint(x,y):
-    global g_new_vertices, g_new_selected_point
-    distances=[]
-    #find closest vertex
-    for vertex in g_new_vertices:
-        #find distance
-        if len(vertex)==3:
-            distances.append(math.sqrt((x-vertex[1])**2+(y-vertex[2])**2))
-    #if clicked point is close to a point
-    if min(distances)<CLOSE_TO_POINT:
-        t.pu()
-        t.st()
-        t.shape("circle")
-        t.goto(*g_new_vertices[distances.index(min(distances))][1:])
-        t.update()
-        g_new_selected_point=distances.index(min(distances))
-    #if not close escape
-    else:
-        g_new_selected_point=-1
-        t.ht()
-        t.update()
+    global g_new_vertices, g_new_selected_point, g_edit_mode, g_table_bounds
+    
+    if g_edit_mode==editMode_point_edit:
+        distances=[]
+        #find closest vertex
+        for vertex in g_new_vertices:
+            #find distance
+            if len(vertex)==3:
+                distances.append(math.sqrt((x-vertex[1])**2+(y-vertex[2])**2))
+        #if clicked point is close to a point
+        if min(distances)<CLOSE_TO_POINT:
+            t.pu()
+            t.st()
+            t.shape("circle")
+            t.goto(*g_new_vertices[distances.index(min(distances))][1:])
+            t.update()
+            g_new_selected_point=distances.index(min(distances))
+        #if not close escape
+        else:
+            g_new_selected_point=-1
+            t.ht()
+            t.update()
+    if g_edit_mode==editMode_transformations:
+        xmax,ymax,inc = g_table_bounds
+        if -xmax<=x<=xmax and -ymax<=y<=ymax-1:#-1 is to prevent clicking on the line to result in an out of range index
+            tableIndex=int((y+ymax)//inc-ymax*2/inc)*-1-1#calculate cell clicked, flip, invert and offset range to be within 0 to 10
 
+            #edit table value
+            g_new_transformation
+
+            #if pattern count
+            if tableIndex==0:
+                newPatternCount = sc.textinput("Pattern count", "Enter new pattern count:")
+                sc.listen()#reclaim listener after textinput claimed handler
+                while True:
+                    try:
+                        if newPatternCount is None:
+                            break
+                        newPatternCount=int(newPatternCount)
+                        break
+                    except ValueError:
+                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer:")
+                        sc.listen()#reclaim listener after textinput claimed handler
+
+                if newPatternCount is not None:
+                    g_new_transformation[tableIndex]=newPatternCount
+            redraw()
 def getClosestLine(x,y):
     global g_new_vertices
     #get a list of valid lines
@@ -116,13 +166,13 @@ def getClosestLine(x,y):
     prevVertex=(0,0)
     indexcount=0
     for vertex in g_new_vertices:
-        if vertex[0] ==vertexMarker.line:
-            if prevlineType==vertexMarker.line or prevlineType==vertexMarker.curveEnd:
+        if vertex[0] ==vertexMarker_line:
+            if prevlineType==vertexMarker_line or prevlineType==vertexMarker_curveEnd:
                 lines.append(prevVertex+vertex[1:]+(indexcount,))
         prevlineType=vertex[0]
-        if vertex[0]!=vertexMarker.End:
+        if vertex[0]!=vertexMarker_End:
             prevVertex=vertex[1:]
-        elif g_new_vertices[0][0]==vertexMarker.line:
+        elif g_new_vertices[0][0]==vertexMarker_line:
             lines.append(prevVertex+g_new_vertices[0][1:]+(len(g_new_vertices)-1,))
         indexcount+=1
     
@@ -136,35 +186,36 @@ def getClosestLine(x,y):
     return distances, closestLine
 
 def clickhandler_addpoint(x,y):
-    global g_new_vertices
+    global g_new_vertices, g_edit_mode
 
-    distances,closest_line=getClosestLine(x,y)
+    if g_edit_mode==editMode_point_edit:
+        distances,closest_line=getClosestLine(x,y)
 
-    #if clicked point is close to a line
-    if min(distances)<CLOSE_TO_POINT:
-        #print(closest_line)
-        #calculate closest point on the line
-        x1,y1,x2,y2,targetIndex=closest_line
-        
-        #if horizontal line
-        if y1==y2:
-            ly=y1
-            lx=x
-        #if verticle line
-        elif x1==x2:
-            lx=x1
-            ly=y
+        #if clicked point is close to a line
+        if min(distances)<CLOSE_TO_POINT:
+            #print(closest_line)
+            #calculate closest point on the line
+            x1,y1,x2,y2,targetIndex=closest_line
             
-        else:
-            m1=(y1-y2)/(x1-x2)
-            m2=-1/m1
-            lx=(m1*x1-m2*x-y1+y)/(m1-m2)
-            ly=m2*(lx-x)+y
-        #print(x,y,lx,ly)
-        g_new_vertices.insert(targetIndex, (vertexMarker.line,lx,ly))
-        plotPolygon(g_new_vertices)
-        clickhandler_movepoint(lx,ly)
-        t.update()
+            #if horizontal line
+            if y1==y2:
+                ly=y1
+                lx=x
+            #if verticle line
+            elif x1==x2:
+                lx=x1
+                ly=y
+                
+            else:
+                m1=(y1-y2)/(x1-x2)
+                m2=-1/m1
+                lx=(m1*x1-m2*x-y1+y)/(m1-m2)
+                ly=m2*(lx-x)+y
+            #print(x,y,lx,ly)
+            g_new_vertices.insert(targetIndex, (vertexMarker_line,lx,ly))
+            plotPolygon(g_new_vertices)
+            clickhandler_movepoint(lx,ly)
+            t.update()
 
 def drawGrid():
     y=sc.window_height()
@@ -188,13 +239,80 @@ def drawGrid():
         t.goto(x,liney)
         t.pu()  
 
+def drawTransformationTable(tabledata):
+    """
+    x,y offset
+    angle offset
+    pattern type
+    shear xy , transform xy, rotate, scale xy, reflection xy
+    pattern count
+    """
+    global g_table_bounds
+    CELL_NAME_WIDTH=300
+    CELL_DATA_WIDTH=100
+    CELL_HEIGHT=30
+    FONT=('Courier', 18, 'normal')
+    ROW_DATA=["Pattern count", "Transform X","Transform Y", "Rotate", "Scale X", "Scale Y", "Shear X", "Shear Y", "Reflection", "Line colour", "Fill colour"]
+    UNITS_DATA=["", "px","px", "deg", "%", "%", "%", "%", "", "", ""]
+    CELLS_Y=len(ROW_DATA)
+    xpoint=int((CELL_NAME_WIDTH+2*CELL_DATA_WIDTH)/2)
+    ypoint=int(CELL_HEIGHT*CELLS_Y/2)
+
+    #draw x grid lines
+    t.pu()
+    for yline in range(-ypoint,ypoint+1,CELL_HEIGHT):
+        
+        t.goto(-xpoint,yline)
+        t.pd()
+        t.goto(xpoint,yline)
+        t.pu()
+        t.goto(-xpoint+10,yline+5)
+
+    #draw y lines
+    totalOffset=0
+    for i in range(4):
+        t.pu()
+        t.goto(-xpoint+totalOffset,-yline)
+        t.pd()
+        t.goto(-xpoint+totalOffset,yline)
+        if i==0:
+            totalOffset+=CELL_NAME_WIDTH
+        else:
+            totalOffset+=CELL_DATA_WIDTH
+
+    #write names and data
+    t.pu()
+    starty=ypoint
+    for i in range(CELLS_Y):
+        starty-=CELL_HEIGHT
+        #print name
+        t.goto(-xpoint+5,starty)
+        t.write(ROW_DATA[i], font=FONT)
+        #print data
+        t.goto(-xpoint+CELL_NAME_WIDTH+5,starty)
+        t.write(tabledata[i], font=FONT)
+        #print units
+        t.goto(-xpoint+CELL_NAME_WIDTH+CELL_DATA_WIDTH+5,starty)
+        t.write(UNITS_DATA[i], font=FONT)
+    g_table_bounds=[xpoint, ypoint, CELL_HEIGHT]
+
 def redraw():
-    global g_new_vertices, g_draw_grid_flag
+    global g_new_vertices, g_draw_grid_flag, g_edit_mode
     t.reset()
-    if g_draw_grid_flag:
-        drawGrid()
-    plotPolygon(g_new_vertices)
-    t.ht()
+    if g_edit_mode==editMode_point_edit:
+        if g_draw_grid_flag:
+            drawGrid()
+        plotPolygon(g_new_vertices)
+        t.ht()
+    
+    if g_edit_mode==editMode_transformations:
+        g_new_transformation=[5, 0,0, 60, 100, 100, 0, 0, "None","Blue","red"]
+        drawTransformationTable(g_new_transformation)
+        t.ht()
+
+    if g_edit_mode==editMode_preview_transformations:
+        plotPolygon(g_new_vertices,line="blue",fill="red")
+        t.ht()
     t.update()
 
 def ondraghandler(*coords):
@@ -211,19 +329,19 @@ def ondraghandler(*coords):
         redraw()
 
 def delPointhandler():
-    global g_new_vertices, g_new_selected_point
+    global g_new_vertices, g_new_selected_point, g_edit_mode
 
-    if g_new_selected_point!=-1 and g_new_vertices[g_new_selected_point][0]==vertexMarker.line and g_new_vertices[g_new_selected_point+1][0]==vertexMarker.line or g_new_vertices[g_new_selected_point+1][0]==vertexMarker.End:#if point is selected
+    if g_new_selected_point!=-1 and g_new_vertices[g_new_selected_point][0]==vertexMarker_line and g_new_vertices[g_new_selected_point+1][0]==vertexMarker_line or g_new_vertices[g_new_selected_point+1][0]==vertexMarker_End and g_edit_mode==editMode_point_edit:#if point is selected
         g_new_vertices.pop(g_new_selected_point)#remove polygon
         #redraw
         t.ht()
         redraw()
 
 def editPoint():
-    global g_new_vertices, g_new_selected_point
+    global g_new_vertices, g_new_selected_point,g_edit_mode
 
-    if g_new_selected_point!=-1:
-        newCoords = sc.textinput("Edit Point", "Enter new coordinates X,y:")
+    if g_new_selected_point!=-1 and g_edit_mode==editMode_point_edit:
+        newCoords = sc.textinput("Edit Point", "Enter new coordinates X,Y:")
         sc.listen()#reclaim listener after textinput claimed handler
         if newCoords:
             try:
@@ -249,12 +367,34 @@ def splineHandler(*coords):
     print(closestLine)
     
 def toggleGrid():
-    global g_draw_grid_flag
-    g_draw_grid_flag= not g_draw_grid_flag
+    global g_draw_grid_flag, g_edit_mode
+
+    if g_edit_mode==editMode_point_edit:
+        g_draw_grid_flag= not g_draw_grid_flag
+
     redraw()
 
+def editTransformations():
+    global g_edit_mode, g_new_selected_point
+    if g_edit_mode==editMode_transformations:
+        g_edit_mode=editMode_point_edit
+    else:
+        g_edit_mode=editMode_transformations
+    redraw()
+
+def previewPolygons():
+    global g_edit_mode, g_new_selected_point
+    if g_edit_mode==editMode_preview_transformations:
+        g_edit_mode=editMode_point_edit
+    else:
+        g_edit_mode=editMode_preview_transformations
+    redraw()
+
+def addPolygon():
+    return
+    #g_all_data.append()
+
 setup()
-newPolygon()
 
 sc.onclick(clickhandler_movepoint,btn=1)
 sc.onclick(clickhandler_addpoint,btn=3)
@@ -263,6 +403,15 @@ sc.onkeypress(delPointhandler,'Delete')
 sc.onkeypress(editPoint,'e')
 sc.onclick(splineHandler,btn=2)
 sc.onkeypress(toggleGrid,'g')
+sc.onkeypress(editTransformations,'t')
+sc.onkeypress(previewPolygons,'p')
+sc.onkeypress(addPolygon,'a')
+
+
+
+
+#show starting polygon
+newPolygon()
 
 t.listen()
 sc.listen()
