@@ -496,11 +496,61 @@ def editPoint():
                 t.update()
 
 def lineToSpline(vertexIndex):
-    global g_new_vertices
-    #find line, add 2 points at 1/3 and 2/3
-    vertextype= g_new_vertices[vertexIndex][0]
-    print()
+    """
+    find line, add 2 points at 1/3 and 2/3
+    """
 
+    global g_new_vertices
+    vertexIndex-=1
+
+    #line points 
+    x1,y1=g_new_vertices[vertexIndex][1:3]
+
+    #check if the next verted is the end marker, if yes second point is start vertex
+    if g_new_vertices[vertexIndex+1][0] != vertexMarker_End:
+        x2,y2=g_new_vertices[vertexIndex+1][1:3]
+    else:
+        x2,y2=g_new_vertices[0][1:3]
+
+    if x2 != x1:
+        grad=(y2-y1)/(x2-x1)
+        print(grad)
+
+    #make x2 and y2 larger than x1 and y1
+    if x1>x2:
+        x1,x2=x2,x1
+    if y1>y2:
+        y1,y2=y2,y1
+
+    #if vert line x1=x2
+    if x1==x2:
+        delta=y2-y1
+        clickhandler_addpoint(x1,y1+delta*1/3)
+        clickhandler_addpoint(x1,y1+delta*2/3)
+
+    #if vert line, y1=y2
+    elif y1==y2:
+        delta=x2-x1
+        clickhandler_addpoint(x1+delta*1/3,y1)
+        clickhandler_addpoint(x1+delta*2/3,y1)
+
+    #slant line
+    else:
+        deltaX=x2-x1
+        deltaY=y2-y1
+        
+        #positive slope
+        if grad>0:
+            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)
+            clickhandler_addpoint(x1+deltaX*2/3,y1+deltaY*2/3)
+        #negative slope 
+        else:
+            print(x1,y1)
+            print(x1+deltaX*1/3,y1+deltaY*1/3)
+            print(x1+deltaX*2/3,y1+deltaY*2/3)
+            print(x2,y2)
+            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)
+            clickhandler_addpoint(x1+deltaX*2/3,y1+deltaY*2/3)
 def splineToLine(vertexIndex):
     global g_new_vertices
     #find points and convert to line
@@ -529,8 +579,10 @@ def splineHandler(*coords):
             vertextype= g_new_vertices[vertexIndex][0]
             if vertextype==vertexMarker_End or vertextype== vertexMarker_line:
                 lineToSpline(vertexIndex)
+                print(vertexIndex)
             elif vertextype==vertexMarker_curve0 or vertextype==vertexMarker_curve1 or vertextype==vertexMarker_curveEnd:
                 splineToLine(vertexIndex)
+                
 
 def toggleGrid():
     global g_draw_grid_flag, g_edit_mode
