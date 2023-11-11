@@ -33,7 +33,7 @@ def setup():
     t.ht()#hide turtle
     t.speed(0)#max speed
     t.delay(0)
-    t.setup(width=1.0, height=1.0, startx=None, starty=None)#full screen, set origin to center
+    #t.setup(width=1.0, height=1.0, startx=None, starty=None)#full screen, set origin to center
     t.title("MA1008 mini project")#Change window title
     sc=t.getscreen()
     t.tracer(0, 0)
@@ -274,31 +274,58 @@ def clickhandler_movepoint(x,y):
                     g_new_transformation[tableIndex]=newcolour
             redraw()
 
-def getClosestLine(x,y):
+def getClosestLine(x,y, includeSplines=False):
     global g_new_vertices
     #get a list of valid lines
     lines=[]
     prevlineType=None
     prevVertex=(0,0)
     indexcount=0
-    for vertex in g_new_vertices:
-        if vertex[0] ==vertexMarker_line:
-            if prevlineType==vertexMarker_line or prevlineType==vertexMarker_curveEnd:
+
+    if not includeSplines:
+        for vertex in g_new_vertices:
+            if vertex[0] ==vertexMarker_line:#if the current vertex is a line
+                if prevlineType==vertexMarker_line or prevlineType==vertexMarker_curveEnd:#check if the previous vertex is also a line or a curve end
+                    lines.append(prevVertex+vertex[1:]+(indexcount,))
+            prevlineType=vertex[0]
+            if vertex[0]!=vertexMarker_End:
+                prevVertex=vertex[1:]
+            elif g_new_vertices[0][0]==vertexMarker_line:
+                lines.append(prevVertex+g_new_vertices[0][1:]+(len(g_new_vertices)-1,))
+            indexcount+=1
+    
+    else:
+        prevVertex=None
+        for vertex in g_new_vertices:
+            if prevVertex is not None and vertex[0]!=vertexMarker_End:
                 lines.append(prevVertex+vertex[1:]+(indexcount,))
-        prevlineType=vertex[0]
-        if vertex[0]!=vertexMarker_End:
-            prevVertex=vertex[1:]
-        elif g_new_vertices[0][0]==vertexMarker_line:
-            lines.append(prevVertex+g_new_vertices[0][1:]+(len(g_new_vertices)-1,))
-        indexcount+=1
+            if vertex[0]!=vertexMarker_End:#get the first point for the vertex
+                prevVertex=vertex[1:]
+            else:#add end vertex first point to last point
+                lines.append(g_new_vertices[0][1:]+prevVertex+(indexcount,))
+            indexcount+=1
     
     #find distance from point to line
     distances=[]
     for line in lines:
         x1,y1,x2,y2,_=line
-        distances.append(abs((x2-x1)*(y1-y)-(x1-x)*(y2-y1))/math.sqrt((x2-x1)**2+(y2-y1)**2))
-    closestLine = lines[distances.index(min(distances))]
+        if x1>x2:
+            x1,x2=x2,x1
+        if y1>y2:
+            y1,y2=y2,y1
 
+        #check if point is in range of line
+        if x1-CLOSE_TO_POINT<x<x2+CLOSE_TO_POINT and y1-CLOSE_TO_POINT<y<y2+CLOSE_TO_POINT:
+            distances.append(abs((x2-x1)*(y1-y)-(x1-x)*(y2-y1))/math.sqrt((x2-x1)**2+(y2-y1)**2))
+        else:
+            dist1=math.sqrt((x1-x)**2+(y1-y)**2)
+            dist2=math.sqrt((x2-x)**2+(y2-y)**2)
+            if dist2<dist1:
+                distances.append(dist2)
+            else:
+                distances.append(dist1)
+    closestLine = lines[distances.index(min(distances))]
+        
     return distances, closestLine
 
 def clickhandler_addpoint(x,y):
@@ -309,7 +336,6 @@ def clickhandler_addpoint(x,y):
 
         #if clicked point is close to a line
         if min(distances)<CLOSE_TO_POINT:
-            #print(closest_line)
             #calculate closest point on the line
             x1,y1,x2,y2,targetIndex=closest_line
             
@@ -327,7 +353,6 @@ def clickhandler_addpoint(x,y):
                 m2=-1/m1
                 lx=(m1*x1-m2*x-y1+y)/(m1-m2)
                 ly=m2*(lx-x)+y
-            #print(x,y,lx,ly)
             g_new_vertices.insert(targetIndex, (vertexMarker_line,lx,ly))
             plotPolygon(g_new_vertices)
             clickhandler_movepoint(lx,ly)
@@ -470,17 +495,43 @@ def editPoint():
                 t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")
                 t.update()
 
-def lineToSpline():
-    pass
+def lineToSpline(vertexIndex):
+    global g_new_vertices
+    #find line, add 2 points at 1/3 and 2/3
+    vertextype= g_new_vertices[vertexIndex][0]
+    print()
 
-def splineToLine():
-    pass
+def splineToLine(vertexIndex):
+    global g_new_vertices
+    #find points and convert to line
+    vertextype= g_new_vertices[vertexIndex][0]
+    if vertextype == vertexMarker_curve0:
+        g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
+        g_new_vertices[vertexIndex+1]=(vertexMarker_line,)+g_new_vertices[vertexIndex+1][1:]
+        g_new_vertices[vertexIndex+2]=(vertexMarker_line,)+g_new_vertices[vertexIndex+2][1:]
+    elif vertextype == vertexMarker_curve1:
+        g_new_vertices[vertexIndex-1]=(vertexMarker_line,)+g_new_vertices[vertexIndex-1][1:]
+        g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
+        g_new_vertices[vertexIndex+1]=(vertexMarker_line,)+g_new_vertices[vertexIndex+1][1:]
+    elif vertextype == vertexMarker_curveEnd:
+        g_new_vertices[vertexIndex-2]=(vertexMarker_line,)+g_new_vertices[vertexIndex-2][1:]
+        g_new_vertices[vertexIndex-1]=(vertexMarker_line,)+g_new_vertices[vertexIndex-1][1:]
+        g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
+    redraw()
 
 def splineHandler(*coords):
-    
-    _, closestLine =  getClosestLine(*coords)
-    print(closestLine)
-    
+    global g_edit_mode, g_new_vertices
+    if g_edit_mode == editMode_point_edit:
+        dist, closestLine =  getClosestLine(*coords, True)
+        dist=min(dist)
+        if dist < CLOSE_TO_POINT:
+            vertexIndex=closestLine[-1]
+            vertextype= g_new_vertices[vertexIndex][0]
+            if vertextype==vertexMarker_End or vertextype== vertexMarker_line:
+                lineToSpline(vertexIndex)
+            elif vertextype==vertexMarker_curve0 or vertextype==vertexMarker_curve1 or vertextype==vertexMarker_curveEnd:
+                splineToLine(vertexIndex)
+
 def toggleGrid():
     global g_draw_grid_flag, g_edit_mode
 
@@ -516,11 +567,16 @@ sc.onclick(clickhandler_addpoint,btn=3)
 t.ondrag(ondraghandler)
 sc.onkeypress(delPointhandler,'Delete')
 sc.onkeypress(editPoint,'e')
+sc.onkeypress(editPoint,'E')
 sc.onclick(splineHandler,btn=2)
 sc.onkeypress(toggleGrid,'g')
+sc.onkeypress(toggleGrid,'G')
 sc.onkeypress(editTransformations,'t')
+sc.onkeypress(editTransformations,'T')
 sc.onkeypress(previewPolygons,'p')
+sc.onkeypress(previewPolygons,'P')
 sc.onkeypress(addPolygon,'a')
+sc.onkeypress(addPolygon,'A')
 
 
 
