@@ -1,0 +1,6 @@
+@line,0,0|curve0,100,0|curve1,100,100|curveEnd,0,100|line,-150,100|line,-150,0|End
+#5,0,0,60,100,100,0,0,None,Blue,red
+
+@line,0,200|curve0,100,200|curve1,100,300|curveEnd,0,300|line,-150,300|line,-150,200|End
+#5,0,0,60,100,100,0,0,None,Blue,red
+
