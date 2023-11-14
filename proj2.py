@@ -98,7 +98,7 @@ def plotPolygon(vertices, line="blue", fill=None):
 
         # if return to start
         elif vertex[0]==vertexMarker_End:
-            t.pencolor("blue")
+            t.pencolor(line)
             t.goto(*vertices[0][1:])
 
         if g_show_values_flag and g_edit_mode==editMode_point_edit and not vertex[0]==vertexMarker_End:
@@ -512,6 +512,9 @@ def editPoint():
                 t.goto(-300,-300)
                 t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")
                 t.update()
+    elif g_edit_mode!=editMode_point_edit:
+        g_edit_mode=editMode_point_edit
+        redraw()
 
 def lineToSpline(vertexIndex):
     """
@@ -870,10 +873,16 @@ def addPolygon():
         print(g_all_data)
 
 def showAll():
-    global g_all_data
+    global g_all_data, g_edit_mode
+
+    g_edit_mode=editMode_show_result
+
     print(g_all_data)
+    t.reset()
     for vertices_data, transformation_data in g_all_data:
         plotPattern(vertices_data,transformation_data)
+        t.ht()
+    t.update()        
 
 def saveFile():
     global g_all_data
@@ -951,8 +960,11 @@ def openFile():
             vertexRaw= vertex.split(',')
             vertex=()
             for i in vertexRaw:
-                if i.replace('-','').isnumeric():
+                try:
+                    i=float(i)
                     i=int(i)
+                except ValueError:
+                    pass
                 vertex=vertex+(i,)
             vertexList.append(vertex)
         print(vertexList)
@@ -1006,8 +1018,3 @@ sc.listen()
 t.mainloop()
 sc.mainloop()
 
-
-
-[[[('line', 0, 0), ('curve0', 100, 0), ('curve1', 100, 100), ('curveEnd', 0, 100), ('line', -150, 100), ('line', -150, 0), ('End',)], 
-  [5, 0, 0, 60, 100, 100, 0, 0, 'None', 'Blue', 'red']]]
-[[[('line', 0, 0), ('curve0', 100, 0), ('curve1', 100, 100), ('curveEnd', 0, 100), ('line', '-150', 100), ('line', '-150', 0), ('End',)], [5, 0, 0, 60, 100, 100, 0, 0, 'None', 'Blue', 'red']], [[('line', 0, 0), ('curve0', 100, 0), ('curve1', 100, 100), ('curveEnd', 0, 100), ('line', '-150', 100), ('line', '-150', 0), ('End',)], [5, 0, 0, 60, 100, 100, 0, 0, 'None', 'Blue', 'red']]]
