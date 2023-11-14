@@ -1,50 +1,123 @@
 """
+MA1008 mini project |  Art with geometry and engineering maths
+
+This program allows a user to generate polygons. 
+Polygons are inputed by mouse inputs. Points can be moved and edited.
+Points can be added, removed and edited with a prescise text input.
+Lines can be changed to splines and splines can be changed to lines.
+Precise values of each vertex can be shown.
+Points can be moved by left clicking and draging.
+Snap to grid can be enabled the grid is set to 50px.
+The whole working polygon can be moved and rotated relative to its current 
+position and rotation.
+
+The transformations can be controlled by the user. The transformations 
+avaliable are translation in the X and Y direction, rotation, scale, shear, 
+and reflection. The line color and fill color can be controled. The 
+transformations can be patterned. All transformations can be applied 
+at the same time. The transformations can be previewed before adding 
+the polygon to the final pattern.
+
+The final pattern can be seen. All transformations can be used at the same time.
+The number of patterns and the number of vertices of each pattern is unlimited.
+
+Controls
+
+MOUSE
+
+left click - Select vertex
+click and drag - Move vertex
+right click - Add vertex at point
+middle mouse click - Change line to spline or change spline to line
+
+KEYBOARD
+e - Edit mode, Edit vertex location
+Del - Delete vertex, vertex must not be part of a spline
+v - Show/hide values
+g - Toggle grid, Snap to grid
+x - Offset, moves the entire working polygon by a relative ammount
+t - Edit transformations for working polygon
+p - Preview working polygon with transformations
+a - Add polygon to final polygon and transformations cannot be edited after this
+f - Show final polygon
+s - Save final polygon
+o - Open a save file
+n - Create a new polygon, resets to starting polygon and resets transformations of working polygon
+h - Show help
+
 """
+
 import turtle as t
 import math
 
 #CONSTANTS
+#constant vertexMarker_line
 vertexMarker_line = "line"
 vertexMarker_curve0 = "curve0"
 vertexMarker_curve1 = "curve1"
 vertexMarker_curveEnd = "curveEnd"
 vertexMarker_End = "End"
 
+#constant editMode
 editMode_point_edit = "point_edit"
 editMode_transformations = "transformations"
 editMode_preview_transformations = "preview_transformations"
 editMode_show_result="show_result"
 
-CURVEPOINTS=100
+CURVEPOINTS=100#number of lines in a spline
 CLOSE_TO_POINT=50#threshold to detect a click on a point
-GRIDSIZE=50
+GRIDSIZE=50#snap to grid size
+
+#Below are polygon defaults
 DEFAULT_VERTICES=[(vertexMarker_line,0,0),(vertexMarker_curve0,100,0),(vertexMarker_curve1,100,100),(vertexMarker_curveEnd,0,100),(vertexMarker_line,-150,100),(vertexMarker_line,-150,0),(vertexMarker_End,)]
 DEFAULT_TRANSFORM=[5, 0, 0, 60, 100, 100, 0, 0, "None","Blue","red"]
 
 #globals
-g_new_vertices=[]
 g_new_selected_point=-1
 g_draw_grid_flag=False
-g_show_values_flag=True
+g_show_values_flag=False
 g_help_menu_flag=False
-g_edit_mode=editMode_point_edit
+g_edit_mode=editMode_point_edit#the current edit mode
 g_table_bounds=[]#x bound, y bound, y increment
+g_new_vertices=[]
 g_new_transformation=[]
 g_all_data=[]
 
 def setup():
-    global sc
+    """
+    Sets the speed of the turtle, aquire a handle on the turtleScreen object and setup the screen draw buffer.
+    """
+    global sc#turtlescreen object
     t.ht()#hide turtle
     t.speed(0)#max speed
-    t.delay(0)
-    #t.setup(width=1.0, height=1.0, startx=None, starty=None)#full screen, set origin to center
+    t.delay(0)#no delay
+    t.setup(width=1.0, height=1.0, startx=None, starty=None)#full screen, set origin to center
     t.title("MA1008 mini project |  Art with geometry and engineering maths")#Change window title
-    sc=t.getscreen()
-    t.tracer(0, 0)
+    sc=t.getscreen()#get a handler for the screen
+    t.tracer(0, 0)#setup screen buffer
 
 def plotPolygon(vertices, line="blue", fill=None):
     """
-    plots polygon, takes in a list of vertices
+    Plots polygon, takes in a list of vertices.
+    
+    For lines:
+    -goto first vertex
+    -pen down
+    -go to last vertex
+
+    For curves:
+    -find the 3 curve segments
+    -pen down
+    -go to the first point
+    -for each curve segment, calculate position
+    -go to curve point until target curve segments are reached
+
+    -if fill is selected
+    -begin fill and end fill before and after plotting the polygon
+
+    @param vertices - a list of vertices of a polygon to plot
+    @param line - line colour of the polygon to plot, defailts to "blue"
+    @param fill - defaults to no fill for edit mode
     """
     t.pu()
     t.goto(*vertices[0][1:])
@@ -112,15 +185,23 @@ def plotPolygon(vertices, line="blue", fill=None):
 def newPolygon():
     """
     Prompts user to create a new polygon
+
+    Sets g_new_vertice and g_new_transformation to default values
+    Plots a new polygon
+    And updates the screen
+
     """
     global g_new_vertices, g_new_transformation
-    #start with a polygon
+    #copy default values to g_new_vertice and g_new_transformation
     g_new_vertices=DEFAULT_VERTICES.copy()
     g_new_transformation=DEFAULT_TRANSFORM.copy()
-    plotPolygon(g_new_vertices)
-    t.update() 
+    plotPolygon(g_new_vertices)#plot polygon
+    t.update()#push screen buffer to screen
 
 def clickhandler_movepoint(x,y):
+    """
+    
+    """
     global g_new_vertices, g_new_selected_point, g_edit_mode, g_table_bounds, g_new_transformation
     
     if g_edit_mode==editMode_point_edit:
@@ -526,6 +607,7 @@ def editPoint():
     global g_new_vertices, g_new_selected_point,g_edit_mode
 
     if g_new_selected_point!=-1 and g_edit_mode==editMode_point_edit:
+        showHelp(1)
         newCoords = sc.textinput("Edit Point", "Enter new coordinates X,Y:")
         sc.listen()#reclaim listener after textinput claimed handler
         if newCoords:
@@ -953,6 +1035,7 @@ def addPolygon():
 def showAll():
     global g_all_data, g_edit_mode
 
+    showHelp(1)
     g_edit_mode=editMode_show_result
 
     print(g_all_data)
@@ -1059,6 +1142,7 @@ def openFile():
     showAll()
 
 def createNew():
+    showHelp(1)
     confirmNew = sc.textinput("Confirm new polygon", "Enter (Y) to confirm:")
     sc.listen()#reclaim listener after textinput claimed handler
     if confirmNew.upper() =='Y':
@@ -1066,9 +1150,9 @@ def createNew():
         t.ht()
         newPolygon()
 
-def showHelp():
+def showHelp(hide=False):
     global g_help_menu_flag
-    if g_help_menu_flag==False:
+    if g_help_menu_flag==False and not hide:
         g_help_menu_flag=True
         t.reset()
         sc.bgpic("help.gif")
@@ -1079,7 +1163,6 @@ def showHelp():
             redraw()
         else:
             showAll()
-
 setup()
 
 sc.onclick(clickhandler_movepoint,btn=1)
@@ -1101,8 +1184,8 @@ sc.onkeypress(addPolygon,'a')
 sc.onkeypress(addPolygon,'A')
 sc.onkeypress(showHideCoordinates,'v')
 sc.onkeypress(showHideCoordinates,'V')
-sc.onkeypress(showAll,'g')
-sc.onkeypress(showAll,'G')
+sc.onkeypress(showAll,'f')
+sc.onkeypress(showAll,'F')
 sc.onkeypress(saveFile,'s')
 sc.onkeypress(saveFile,'S')
 sc.onkeypress(openFile,'o')
