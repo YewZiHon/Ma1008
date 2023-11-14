@@ -1056,6 +1056,7 @@ def openFile():
         print(transList)
         g_all_data.append([vertexList,transList])
     redraw()
+    showAll()
 
 def createNew():
     confirmNew = sc.textinput("Confirm new polygon", "Enter (Y) to confirm:")
@@ -1074,7 +1075,10 @@ def showHelp():
     else:
         g_help_menu_flag=False
         sc.bgpic('nopic')
-        redraw()
+        if g_edit_mode!=editMode_show_result:
+            redraw()
+        else:
+            showAll()
 
 setup()
 
