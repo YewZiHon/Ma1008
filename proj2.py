@@ -228,11 +228,11 @@ def clickhandler_movepoint(x,y):
                         if newShear is None:
                             break
                         newShear=int(newShear)
-                        if newShear<-200 or newShear>200:
+                        if newShear<-100 or newShear>100:
                             raise ValueError
                         break
                     except ValueError:
-                        newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -200 and 200:")
+                        newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -100 and 100:")
                         sc.listen()#reclaim listener after textinput claimed handler
                 if newShear is not None:
                     g_new_transformation[tableIndex]=newShear
@@ -692,6 +692,7 @@ def scaleMat(sx,sy):
     #normalise values
     sx=sx/100
     sy=sy/100
+
     return [
         [sx,0,0],
         [0,sy,0],
@@ -780,10 +781,30 @@ def plotPattern(new_vertices, new_transformations):
     plotPolygon(new_vertices,line=lineCol,fill=fillCol)
     deltaScaleX=scaleX-100
     deltaScaleY=scaleY-100
+    if deltaScaleX<0:
+        scaleXMult=-1
+    else:
+        scaleXMult=1
+    if deltaScaleY<0:
+        scaleYMult=-1
+    else:
+        scaleYMult=1
 
-    for i in range(patternCount):
+
+    for i in range(patternCount-1):
         j=(i+1)/patternCount
-        homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*j,scaleY+deltaScaleY*j), shearMat(shearX*j, shearY  *j))
+
+        if scaleXMult==-1:
+            jX=1-j
+        else:
+            jX=j
+
+        if scaleXMult==-1:
+            jY=1-j
+        else:
+            jY=j
+
+        homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY  *j))
         #homoCoords=matmul(transMat(transformX*j,transformY*j), scaleMat(10,10))
         transformed_vectors = vertexTransformer(homoCoords,new_vertices)
         plotPolygon(transformed_vectors,line=lineCol,fill=fillCol)
@@ -978,8 +999,6 @@ def openFile():
         print(transList)
         g_all_data.append([vertexList,transList])
     redraw()
-            
-
 
 
 setup()
@@ -1018,3 +1037,7 @@ sc.listen()
 t.mainloop()
 sc.mainloop()
 
+
+#todo
+#add rotiation on point
+#fix 
