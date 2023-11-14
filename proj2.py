@@ -18,12 +18,15 @@ editMode_show_result="show_result"
 CURVEPOINTS=100
 CLOSE_TO_POINT=50#threshold to detect a click on a point
 GRIDSIZE=50
+DEFAULT_VERTICES=[(vertexMarker_line,0,0),(vertexMarker_curve0,100,0),(vertexMarker_curve1,100,100),(vertexMarker_curveEnd,0,100),(vertexMarker_line,-150,100),(vertexMarker_line,-150,0),(vertexMarker_End,)]
+DEFAULT_TRANSFORM=[5, 0, 0, 60, 100, 100, 0, 0, "None","Blue","red"]
 
 #globals
 g_new_vertices=[]
 g_new_selected_point=-1
 g_draw_grid_flag=False
 g_show_values_flag=True
+g_help_menu_flag=False
 g_edit_mode=editMode_point_edit
 g_table_bounds=[]#x bound, y bound, y increment
 g_new_transformation=[]
@@ -111,9 +114,9 @@ def newPolygon():
     Prompts user to create a new polygon
     """
     global g_new_vertices, g_new_transformation
-    #start with a simple square
-    g_new_vertices=[(vertexMarker_line,0,0),(vertexMarker_curve0,100,0),(vertexMarker_curve1,100,100),(vertexMarker_curveEnd,0,100),(vertexMarker_line,-150,100),(vertexMarker_line,-150,0),(vertexMarker_End,)]
-    g_new_transformation=[5, 0, 0, 60, 100, 100, 0, 0, "None","Blue","red"]
+    #start with a polygon
+    g_new_vertices=DEFAULT_VERTICES.copy()
+    g_new_transformation=DEFAULT_TRANSFORM.copy()
     plotPolygon(g_new_vertices)
     t.update() 
 
@@ -185,21 +188,38 @@ def clickhandler_movepoint(x,y):
 
             #if rotate
             elif tableIndex==3:
-                newrotate = sc.textinput("Rotate", "Enter new rotation:")
+                newrotate = sc.textinput("Rotate", "Enter new rotation. Use C to seperate center coordinates:")
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
                         if newrotate is None:
                             break
-                        newrotate=int(newrotate)
+                        newrotate=newrotate.upper()
+                        #remove spcae char
+                        newrotate=newrotate.replace(' ','')
+                        if 'C' in newrotate and ',' in newrotate:
+                            newrotate,coords=newrotate.split('C')
+                            coords = coords.split(',')
+                            print(coords)
+                            if not -360<int(coords[0])<360 or not -1000<int(coords[1])<1000 or not -1000<int(coords[2])<1000:
+                                raise ValueError
+                        else:
+                            coords=[]
+
+                        newrotate=int(newrotate)  
+
                         if newrotate<-360 or newrotate>360:
                             raise ValueError
+                        
                         break
                     except ValueError:
-                        newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360:")
+                        newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360.\n Enter offsets between -1000 and 1000.\nAngle without offset: 60\nAngle with offset center: 60C60,100,-100")
                         sc.listen()#reclaim listener after textinput claimed handler
                 if newrotate is not None:
-                    g_new_transformation[tableIndex]=newrotate
+                    if coords==[]:
+                        g_new_transformation[tableIndex]=newrotate
+                    else:
+                        g_new_transformation[tableIndex]=str(newrotate)+'C'+str(coords[0])+','+str(coords[1])+','+str(coords[2])
 
             #if scale
             elif tableIndex==4 or tableIndex==5:
@@ -239,21 +259,24 @@ def clickhandler_movepoint(x,y):
 
             #if rotation
             elif tableIndex==8:
-                newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,None):")
+                newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,XY,None):")
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
-                    if newReflection=='Y' or 'y':
+                    if newReflection=='Y' or newReflection=='y':
                         newReflection='Y'
                         break
-                    elif newReflection=='X' or 'x':
+                    elif newReflection=='X' or newReflection=='x':
                         newReflection='X'
                         break
                     elif newReflection.upper()=="NONE":
                         newReflection='None'
                         break
+                    elif newReflection.upper() == 'XY':
+                        newReflection='XY'
+                        break
                     elif newReflection == None:
                         break
-                    newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y or None:")
+                    newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y, XY or None:")
                     sc.listen()#reclaim listener after textinput claimed handler
                 if newReflection is not None:
                     g_new_transformation[tableIndex]=newReflection
@@ -264,18 +287,19 @@ def clickhandler_movepoint(x,y):
                 while True:
                     try:
                         if newcolour==None:
-                            pass
+                            break
+                        
                         #if line colour
                         elif tableIndex==9:
                             t.pencolor(newcolour)        
                         else:
                             t.fillcolor(newcolour)
+                        g_new_transformation[tableIndex]=newcolour
                         break
                     except:
                         newcolour = sc.textinput("Colour", "Enter new colour, close this prompt and see help(h) for valid colours:")
                         sc.listen()#reclaim listener after textinput claimed handler
-                if newcolour is not None:
-                    g_new_transformation[tableIndex]=newcolour
+                
             redraw()
 
 def getClosestLine(x,y, includeSplines=False):
@@ -407,13 +431,14 @@ def drawTransformationTable(tabledata):
     """
     global g_table_bounds
     CELL_NAME_WIDTH=300
-    CELL_DATA_WIDTH=100
+    CELL_DATA_WIDTH=200
+    CELL_DATA2_WIDTH=50
     CELL_HEIGHT=30
     FONT=('Courier', 18, 'normal')
     ROW_DATA=["Pattern count", "Transform pattern X","Transform pattern Y", "Rotate pattern", "Scale pattern X", "Scale pattern Y", "Shear pattern X", "Shear pattern Y", "Reflection", "Line colour", "Fill colour"]
     UNITS_DATA=["", "px","px", "deg", "%", "%", "%", "%", "", "", ""]
     CELLS_Y=len(ROW_DATA)
-    xpoint=int((CELL_NAME_WIDTH+2*CELL_DATA_WIDTH)/2)
+    xpoint=int((CELL_NAME_WIDTH+CELL_DATA_WIDTH+CELL_DATA2_WIDTH)/2)
     ypoint=int(CELL_HEIGHT*CELLS_Y/2)
 
     #draw x grid lines
@@ -435,8 +460,10 @@ def drawTransformationTable(tabledata):
         t.goto(-xpoint+totalOffset,yline)
         if i==0:
             totalOffset+=CELL_NAME_WIDTH
-        else:
+        elif i==1:
             totalOffset+=CELL_DATA_WIDTH
+        else:
+            totalOffset+=CELL_DATA2_WIDTH
 
     #write names and data
     t.pu()
@@ -718,6 +745,10 @@ def reflectMat(reflection):
         rx=1
         ry=-1
     
+    elif reflection.upper()=="XY":
+        rx=-1
+        ry=-1
+
     else:
         rx=1
         ry=1
@@ -777,8 +808,18 @@ def plotPattern(new_vertices, new_transformations):
     lineCol = new_transformations[9]
     fillCol = new_transformations[10]
 
-    #plot first polygon
-    plotPolygon(new_vertices,line=lineCol,fill=fillCol)
+    if type(rotation)==str:
+        rotation,coords=rotation.split('C')
+        rotation=int(rotation)
+
+        rotc, coordx, coordy=coords.split(',')
+        rotc, coordx, coordy=int(rotc), int(coordx), int(coordy)
+        rotonC=True
+        print(rotc, coordx, coordy)
+    else:
+        rotonC=False
+
+    
     deltaScaleX=scaleX-100
     deltaScaleY=scaleY-100
     if deltaScaleX<0:
@@ -790,24 +831,41 @@ def plotPattern(new_vertices, new_transformations):
     else:
         scaleYMult=1
 
+    reflection=reflection.upper()
 
-    for i in range(patternCount-1):
-        j=(i+1)/patternCount
+    if reflection=='NONE':
+        reflectionpatterns=['NONE']
+    elif reflection=='X':
+        reflectionpatterns=['NONE','X']
+    elif reflection=='Y':
+        reflectionpatterns=['NONE','Y']
+    elif reflection=='XY':
+        reflectionpatterns=['NONE','X','Y','XY']
+    for reflect in reflectionpatterns:
+        #plot first polygon
+        firstVertex=vertexTransformer(reflectMat(reflect), new_vertices)
+        plotPolygon(firstVertex,line=lineCol,fill=fillCol)
+        for i in range(patternCount-1):
+            j=(i+1)/(patternCount-1)
 
-        if scaleXMult==-1:
-            jX=1-j
-        else:
-            jX=j
+            if scaleXMult==-1:
+                jX=1-j
+            else:
+                jX=j
 
-        if scaleXMult==-1:
-            jY=1-j
-        else:
-            jY=j
+            if scaleXMult==-1:
+                jY=1-j
+            else:
+                jY=j
+            if rotonC:
+                new_vertices=vertexTransformer(transMat(-coordx,-coordy),new_vertices)
+                new_vertices=vertexTransformer(rotMat(rotc*j),new_vertices)
+                new_vertices=vertexTransformer(transMat(coordx,coordy),new_vertices)
 
-        homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY  *j))
-        #homoCoords=matmul(transMat(transformX*j,transformY*j), scaleMat(10,10))
-        transformed_vectors = vertexTransformer(homoCoords,new_vertices)
-        plotPolygon(transformed_vectors,line=lineCol,fill=fillCol)
+            homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY *j), reflectMat(reflect))
+            #homoCoords=matmul(transMat(transformX*j,transformY*j), scaleMat(10,10))
+            transformed_vectors = vertexTransformer(homoCoords,new_vertices)
+            plotPolygon(transformed_vectors,line=lineCol,fill=fillCol)
 
 def offsetPolygon():
     global g_edit_mode, g_new_vertices
@@ -891,7 +949,6 @@ def addPolygon():
         g_all_data.append([g_new_vertices.copy(),g_new_transformation.copy()])
         sc.textinput("Polygon added", "Polygon added!\nClose to continue")
         sc.listen()#reclaim listener after textinput claimed handler
-        print(g_all_data)
 
 def showAll():
     global g_all_data, g_edit_mode
@@ -1000,6 +1057,24 @@ def openFile():
         g_all_data.append([vertexList,transList])
     redraw()
 
+def createNew():
+    confirmNew = sc.textinput("Confirm new polygon", "Enter (Y) to confirm:")
+    sc.listen()#reclaim listener after textinput claimed handler
+    if confirmNew.upper() =='Y':
+        t.reset()
+        t.ht()
+        newPolygon()
+
+def showHelp():
+    global g_help_menu_flag
+    if g_help_menu_flag==False:
+        g_help_menu_flag=True
+        t.reset()
+        sc.bgpic("help.gif")
+    else:
+        g_help_menu_flag=False
+        sc.bgpic('nopic')
+        redraw()
 
 setup()
 
@@ -1022,12 +1097,16 @@ sc.onkeypress(addPolygon,'a')
 sc.onkeypress(addPolygon,'A')
 sc.onkeypress(showHideCoordinates,'v')
 sc.onkeypress(showHideCoordinates,'V')
-sc.onkeypress(showAll,'h')
-sc.onkeypress(showAll,'H')
+sc.onkeypress(showAll,'g')
+sc.onkeypress(showAll,'G')
 sc.onkeypress(saveFile,'s')
 sc.onkeypress(saveFile,'S')
 sc.onkeypress(openFile,'o')
 sc.onkeypress(openFile,'O')
+sc.onkeypress(createNew,'n')
+sc.onkeypress(createNew,'N')
+sc.onkeypress(showHelp,'h')
+sc.onkeypress(showHelp,'H')
 
 #show starting polygon
 newPolygon()
@@ -1039,5 +1118,4 @@ sc.mainloop()
 
 
 #todo
-#add rotiation on point
-#fix 
+#help menu
