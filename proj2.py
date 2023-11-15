@@ -237,6 +237,9 @@ def leftclickhandler(x,y):
     Select the point by moving the turtle to it making the turtle visible.
     
     EDIT TRANSFORM
+    Get table boundaries of the transformation table to make sure that clicks 
+    are within table bounds. And to check which index the table is clicked.
+
 
     @param x, y - x, and y coordinates that the user clicked on.
     """
@@ -255,41 +258,49 @@ def leftclickhandler(x,y):
         
         #if clicked point is close to a point
         if min(distances)<CLOSE_TO_POINT:
+            #stop drawing, pen up and show turtle.
             t.pu()
             t.st()
-            t.shape("circle")
-            t.goto(*g_new_vertices[distances.index(min(distances))][1:])
-            t.update()
-            g_new_selected_point=distances.index(min(distances))
-        #if not close escape
+            t.shape("circle")#set turtle to circle shape
+            t.goto(*g_new_vertices[distances.index(min(distances))][1:])#go to closest point
+            t.update()#push turtle to screen
+            g_new_selected_point=distances.index(min(distances))#update the index of the closest vertex
+        
+        #if not close, user lcicked on empty space, escape selected point state.
         else:
-            g_new_selected_point=-1
-            t.ht()
+            g_new_selected_point=-1#no selected point
+            t.ht()#hide turtle and update screen
             t.update()
     
     #left click handler for transformation table
     if g_edit_mode==editMode_transformations:
-        xmax,ymax,inc = g_table_bounds
+        xmax,ymax,inc = g_table_bounds#get pre calculated table bounds.
         if -xmax<=x<=xmax and -ymax<=y<=ymax-1:#-1 is to prevent clicking on the line to result in an out of range index
             tableIndex=int((y+ymax)//inc-ymax*2/inc)*-1-1#calculate cell clicked, flip, invert and offset range to be within 0 to 10
 
-            #edit table value
-
             #if pattern count
             if tableIndex==0:
-                newPatternCount = sc.textinput("Pattern count", "Enter new pattern count:")
+                newPatternCount = sc.textinput("Pattern count", "Enter new pattern count:")#ask for new pattern count
                 sc.listen()#reclaim listener after textinput claimed handler
+
+                #check if given number is valid
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newPatternCount is None:
                             break
-                        newPatternCount=int(newPatternCount)
-                        if newPatternCount<1 or newPatternCount>10:
+                        
+                        newPatternCount=int(newPatternCount)#attempt to convert to integer
+                        if newPatternCount<1 or newPatternCount>100:#check if value is in range
                             raise ValueError
                         break
+
+                    #error handler, prompt user again
                     except ValueError:
-                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer between 1 and 10:")
+                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer between 1 and 10:")#ask for new pattern count
                         sc.listen()#reclaim listener after textinput claimed handler
+                
+                #if the user gave a valid value, save to list
                 if newPatternCount is not None:
                     g_new_transformation[tableIndex]=newPatternCount
 
@@ -299,15 +310,18 @@ def leftclickhandler(x,y):
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newTransform is None:
                             break
-                        newTransform=int(newTransform)
+                        newTransform=int(newTransform)#attempt to convert to integer
                         if newTransform<-1000 or newTransform>1000:
                             raise ValueError
                         break
                     except ValueError:
                         newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -1000 and 1000:")
                         sc.listen()#reclaim listener after textinput claimed handler
+
+                #if the user gave a valid value, save to list
                 if newTransform is not None:
                     g_new_transformation[tableIndex]=newTransform
 
@@ -317,6 +331,7 @@ def leftclickhandler(x,y):
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newrotate is None:
                             break
                         newrotate=newrotate.upper()
@@ -331,7 +346,8 @@ def leftclickhandler(x,y):
                         else:
                             coords=[]
 
-                        newrotate=int(newrotate)  
+                        #attempt to convert to integer
+                        newrotate=int(newrotate)
 
                         if newrotate<-360 or newrotate>360:
                             raise ValueError
@@ -340,6 +356,8 @@ def leftclickhandler(x,y):
                     except ValueError:
                         newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360.\n Enter offsets between -1000 and 1000.\nAngle without offset: 60\nAngle with offset center: 60C60,100,-100")
                         sc.listen()#reclaim listener after textinput claimed handler
+                
+                #if the user gave a valid value, save to list
                 if newrotate is not None:
                     if coords==[]:
                         g_new_transformation[tableIndex]=newrotate
@@ -352,15 +370,21 @@ def leftclickhandler(x,y):
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newScale is None:
                             break
-                        newScale=int(newScale)
+
+                        newScale=int(newScale)#attempt to convert to integer
+
                         if newScale<1 or newScale>1000:
                             raise ValueError
                         break
+
                     except ValueError:
                         newScale = sc.textinput("Scale", "Enter new scale, please enter an integer between 1 and 1000:")
                         sc.listen()#reclaim listener after textinput claimed handler
+                
+                #if the user gave a valid value, save to list
                 if newScale is not None:
                     g_new_transformation[tableIndex]=newScale
             
@@ -370,15 +394,21 @@ def leftclickhandler(x,y):
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newShear is None:
                             break
-                        newShear=int(newShear)
+
+                        newShear=int(newShear)#attempt to convert to integer
+
                         if newShear<-100 or newShear>100:
                             raise ValueError
                         break
+
                     except ValueError:
                         newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -100 and 100:")
                         sc.listen()#reclaim listener after textinput claimed handler
+                
+                #if the user gave a valid value, save to list
                 if newShear is not None:
                     g_new_transformation[tableIndex]=newShear
 
@@ -387,6 +417,7 @@ def leftclickhandler(x,y):
                 newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,XY,None):")
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
+
                     if newReflection=='Y' or newReflection=='y':
                         newReflection='Y'
                         break
@@ -399,18 +430,25 @@ def leftclickhandler(x,y):
                     elif newReflection.upper() == 'XY':
                         newReflection='XY'
                         break
+
+                    #check if the user cancled the prompt.
                     elif newReflection == None:
                         break
+
                     newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y, XY or None:")
                     sc.listen()#reclaim listener after textinput claimed handler
+                
+                #if the user gave a valid value, save to list
                 if newReflection is not None:
                     g_new_transformation[tableIndex]=newReflection
+
             #if colour change
             elif tableIndex==9 or tableIndex==10:
                 newcolour = sc.textinput("Colour", "Enter new colour:")
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
+                        #check if the user cancled the prompt.
                         if newcolour==None:
                             break
                         
@@ -419,12 +457,15 @@ def leftclickhandler(x,y):
                             t.pencolor(newcolour)        
                         else:
                             t.fillcolor(newcolour)
+                        
+                        #if the user gave a valid value, save to list
                         g_new_transformation[tableIndex]=newcolour
                         break
                     except:
                         newcolour = sc.textinput("Colour", "Enter new colour, close this prompt and see help(h) for valid colours:")
                         sc.listen()#reclaim listener after textinput claimed handler
-                
+           
+            #finally, update the transform table
             redraw()
 
 def getClosestLine(x,y, includeSplines=False):
