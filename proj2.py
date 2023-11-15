@@ -119,66 +119,91 @@ def plotPolygon(vertices, line="blue", fill=None):
     @param line - line colour of the polygon to plot, defailts to "blue"
     @param fill - defaults to no fill for edit mode
     """
+    #pen up, go to first down then pen down to start drawing
     t.pu()
     t.goto(*vertices[0][1:])
     t.pd()
-    sx,sy=0,0
-    points=[]
+
+    #data for splines
+    sx,sy=0,0#start point for splines
+    points=[]#vertices for the curve points
+
+    #Set fill colour if needed. No fill for edit mode
     if fill is not None:
         t.fillcolor(fill)
         t.begin_fill()
-    else:
+    else:#else set 
         t.color("blue")
+
+    #go through each vertex
     for vertex in vertices:
         #if line vertex
         if vertex[0]==vertexMarker_line:
-            t.pencolor(line)
-            t.goto(*vertex[1:])
+            t.pencolor(line)#set pen colour
+            t.goto(*vertex[1:])#go to next vertex
             if fill is None:
-                t.dot("black")
+                t.dot("black")#if in edit mode, add a dot.
                 
 
         #if curve line
         elif vertex[0]==vertexMarker_curve0:
             #get start point
             sx,sy=t.position()
+
+            #plot control vertex if in edit mode
             if fill is None:
-                t.pencolor("red")
+                t.pencolor("red")#plot control point in red
                 t.goto(*vertex[1:])
                 t.dot("red")
-            points=[*vertex[1:]]
+            points=[*vertex[1:]]#add vertex to spline point array
 
         elif vertex[0]==vertexMarker_curve1:
+            #second control vertex
             if fill is None:
                 t.pencolor("red")
                 t.goto(*vertex[1:])
                 t.dot("red")
-            points.extend(vertex[1:])
+            points.extend(vertex[1:])#add vertex to spline point array
 
         elif vertex[0]==vertexMarker_curveEnd:
+            #third control vertex
             if fill is None:
                 t.pencolor("red")
                 t.goto(*vertex[1:])
                 t.dot("black")  
-            points.extend(vertex[1:]) 
+            points.extend(vertex[1:])#add vertex to spline point array
+
             #plot curve
-            t.pu()
-            t.pencolor(line)
+            t.pu()#Lift pen and move to start point of curve
             t.goto(sx,sy)
-            t.pd()
+            t.pencolor(line)#set line color for spline
+            t.pd()#start drawing the curve
+
+            #start calculating the curve segments and plotting curve segment
             for i in range(CURVEPOINTS+1):
+                #p will be in range 0.0 to 1.0
                 p = i/CURVEPOINTS
+                #calculate x and y of each curve point
                 x = sx*(1-p)**3 + 3*points[0]*p*(1-p)**2 + 3*points[2]*p**2*(1-p) + points[4]*p**3
                 y = sy*(1-p)**3 + 3*points[1]*p*(1-p)**2 + 3*points[3]*p**2*(1-p) + points[5]*p**3
+                #move to curve point
                 t.goto(x, y)
 
         # if return to start
         elif vertex[0]==vertexMarker_End:
             t.pencolor(line)
+            #goto first vertex to close the polygon
             t.goto(*vertices[0][1:])
 
+        #if vrite values and in edit mode, draw vertex values
         if g_show_values_flag and g_edit_mode==editMode_point_edit and not vertex[0]==vertexMarker_End:
-            t.write(vertex[1:3])
+            #get values for x and y coordinates, round to integer and display
+            x,y=vertex[1:3]
+            x=round(x)
+            y=round(y)
+            t.write(str(x)+','+str(y))
+
+    #end fill if fill is enabled
     if fill is not None:
         t.end_fill()
        
@@ -198,19 +223,36 @@ def newPolygon():
     plotPolygon(g_new_vertices)#plot polygon
     t.update()#push screen buffer to screen
 
-def clickhandler_movepoint(x,y):
+def leftclickhandler(x,y):
     """
+    Call back function for left mouse button.
+    Left mouse button is used in edit mode and when editing transformation table.
+
+    EDIT MODE
+
+    Select vertex points. 
+    Find distance to all points from the clicked point.
+    If distance is less than set constant CLOSE_TO_POINT,
+    point is the one that the user has intended to click.
+    Select the point by moving the turtle to it making the turtle visible.
     
+    EDIT TRANSFORM
+
+    @param x, y - x, and y coordinates that the user clicked on.
     """
     global g_new_vertices, g_new_selected_point, g_edit_mode, g_table_bounds, g_new_transformation
     
+    #left click handler for edit mode
     if g_edit_mode==editMode_point_edit:
-        distances=[]
+        distances=[]#array for storing distances to vertices
         #find closest vertex
         for vertex in g_new_vertices:
             #find distance
-            if len(vertex)==3:
+            if len(vertex)==3:#only for vertices with x, y coords. And not end marker.
+                #use pythagorean distance for finding the distance between the vertex and point clicked
+                #dist^2=deltaX^2+deltaY^2
                 distances.append(math.sqrt((x-vertex[1])**2+(y-vertex[2])**2))
+        
         #if clicked point is close to a point
         if min(distances)<CLOSE_TO_POINT:
             t.pu()
@@ -224,6 +266,8 @@ def clickhandler_movepoint(x,y):
             g_new_selected_point=-1
             t.ht()
             t.update()
+    
+    #left click handler for transformation table
     if g_edit_mode==editMode_transformations:
         xmax,ymax,inc = g_table_bounds
         if -xmax<=x<=xmax and -ymax<=y<=ymax-1:#-1 is to prevent clicking on the line to result in an out of range index
@@ -477,7 +521,7 @@ def clickhandler_addpoint(x,y):
                 ly=m2*(lx-x)+y
             g_new_vertices.insert(targetIndex, (vertexMarker_line,lx,ly))
             plotPolygon(g_new_vertices)
-            clickhandler_movepoint(lx,ly)
+            leftclickhandler(lx,ly)
             t.update()
 
 def drawGrid():
@@ -1165,7 +1209,7 @@ def showHelp(hide=False):
             showAll()
 setup()
 
-sc.onclick(clickhandler_movepoint,btn=1)
+sc.onclick(leftclickhandler,btn=1)
 sc.onclick(clickhandler_addpoint,btn=3)
 t.ondrag(ondraghandler)
 sc.onkeypress(delPointhandler,'Delete')
