@@ -96,7 +96,7 @@ def setup():
     sc=t.getscreen()#get a handler for the screen
     t.tracer(0, 0)#setup screen buffer
 
-def plotPolygon(vertices, line="blue", fill=None):
+def plotPolygon(vertices, line="blue", fill=None):  
     """
     Plots polygon, takes in a list of vertices.
     
@@ -297,7 +297,7 @@ def leftclickhandler(x,y):
 
                     #error handler, prompt user again
                     except ValueError:
-                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer between 1 and 10:")#ask for new pattern count
+                        newPatternCount = sc.textinput("Pattern count", "Enter new pattern count, please enter an integer between 1 and 10:")#ask for new pattern count with limits
                         sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
@@ -306,7 +306,7 @@ def leftclickhandler(x,y):
 
             #if transform
             elif tableIndex==1 or tableIndex==2:
-                newTransform = sc.textinput("Transform", "Enter new transformation:")
+                newTransform = sc.textinput("Transform", "Enter new transformation:")#ask for new transform value
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
@@ -318,7 +318,7 @@ def leftclickhandler(x,y):
                             raise ValueError
                         break
                     except ValueError:
-                        newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -1000 and 1000:")
+                        newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -1000 and 1000:")#ask for new transform value with limits
                         sc.listen()#reclaim listener after textinput claimed handler
 
                 #if the user gave a valid value, save to list
@@ -327,46 +327,53 @@ def leftclickhandler(x,y):
 
             #if rotate
             elif tableIndex==3:
-                newrotate = sc.textinput("Rotate", "Enter new rotation. Use C to seperate center coordinates:")
+                newrotate = sc.textinput("Rotate", "Enter new rotation. Use C to seperate center coordinates:")#ask for new rotation
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
                         #check if the user cancled the prompt.
                         if newrotate is None:
                             break
+
+                        #convert to upper case
                         newrotate=newrotate.upper()
                         #remove spcae char
                         newrotate=newrotate.replace(' ','')
+                        #check the required chars are in the return value
                         if 'C' in newrotate and ',' in newrotate:
+                            #split to new rotation and coordinates
                             newrotate,coords=newrotate.split('C')
+                            #split x,y coordinates
                             coords = coords.split(',')
-                            print(coords)
+                            #check rotation and coords are in range
                             if not -360<int(coords[0])<360 or not -1000<int(coords[1])<1000 or not -1000<int(coords[2])<1000:
                                 raise ValueError
                         else:
+                            #else no center coords
                             coords=[]
 
                         #attempt to convert to integer
                         newrotate=int(newrotate)
 
+                        #check rotation is in range
                         if newrotate<-360 or newrotate>360:
                             raise ValueError
                         
                         break
-                    except ValueError:
+                    except ValueError:#ask for new rotation with help on how
                         newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360.\n Enter offsets between -1000 and 1000.\nAngle without offset: 60\nAngle with offset center: 60C60,100,-100")
                         sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
                 if newrotate is not None:
                     if coords==[]:
-                        g_new_transformation[tableIndex]=newrotate
+                        g_new_transformation[tableIndex]=newrotate#copy to transform list as integer
                     else:
-                        g_new_transformation[tableIndex]=str(newrotate)+'C'+str(coords[0])+','+str(coords[1])+','+str(coords[2])
+                        g_new_transformation[tableIndex]=str(newrotate)+'C'+str(coords[0])+','+str(coords[1])+','+str(coords[2])#convert to string and save to array
 
             #if scale
             elif tableIndex==4 or tableIndex==5:
-                newScale = sc.textinput("Scale", "Enter new scale:")
+                newScale = sc.textinput("Scale", "Enter new scale:")#ask user for scale
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
@@ -375,13 +382,13 @@ def leftclickhandler(x,y):
                             break
 
                         newScale=int(newScale)#attempt to convert to integer
-
+                        #check if scale is in range
                         if newScale<1 or newScale>1000:
                             raise ValueError
                         break
 
                     except ValueError:
-                        newScale = sc.textinput("Scale", "Enter new scale, please enter an integer between 1 and 1000:")
+                        newScale = sc.textinput("Scale", "Enter new scale, please enter an integer between 1 and 1000:")#ask user for scale with range
                         sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
@@ -390,7 +397,7 @@ def leftclickhandler(x,y):
             
             #if shear
             elif tableIndex==6 or tableIndex==7:
-                newShear = sc.textinput("Shear", "Enter new shear:")
+                newShear = sc.textinput("Shear", "Enter new shear:")#ask user for new shear value
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
@@ -399,13 +406,13 @@ def leftclickhandler(x,y):
                             break
 
                         newShear=int(newShear)#attempt to convert to integer
-
+                        #check if new shear is in range
                         if newShear<-100 or newShear>100:
                             raise ValueError
                         break
 
                     except ValueError:
-                        newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -100 and 100:")
+                        newShear = sc.textinput("Scale", "Enter new shear, please enter an integer between -100 and 100:")#ask for new shear value, prompt provides valid range
                         sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
@@ -414,10 +421,11 @@ def leftclickhandler(x,y):
 
             #if rotation
             elif tableIndex==8:
-                newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,XY,None):")
+                newReflection = sc.textinput("Reflection", "Enter new reflection (X,Y,XY,None):")#ask the user for a reflection
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
-
+                    
+                    #If else to check if there is a valid reflection
                     if newReflection=='Y' or newReflection=='y':
                         newReflection='Y'
                         break
@@ -435,7 +443,7 @@ def leftclickhandler(x,y):
                     elif newReflection == None:
                         break
 
-                    newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y, XY or None:")
+                    newReflection = sc.textinput("Reflection", "Enter new reflection, please enter either X, Y, XY or None:")#ask the user for a reflection
                     sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
@@ -444,7 +452,7 @@ def leftclickhandler(x,y):
 
             #if colour change
             elif tableIndex==9 or tableIndex==10:
-                newcolour = sc.textinput("Colour", "Enter new colour:")
+                newcolour = sc.textinput("Colour", "Enter new colour:")#ask the user for a new colour
                 sc.listen()#reclaim listener after textinput claimed handler
                 while True:
                     try:
@@ -452,10 +460,11 @@ def leftclickhandler(x,y):
                         if newcolour==None:
                             break
                         
+                        #attempt to set the colour, if successful, no errors, else error will be handled by except.
                         #if line colour
                         elif tableIndex==9:
                             t.pencolor(newcolour)        
-                        else:
+                        else:#else fill colour
                             t.fillcolor(newcolour)
                         
                         #if the user gave a valid value, save to list
@@ -469,7 +478,27 @@ def leftclickhandler(x,y):
             redraw()
 
 def getClosestLine(x,y, includeSplines=False):
+    """
+    Finds the closest line to a point
+
+    Finds the distance by calculating the perpendicular distance of the line vector to a 
+    vector fromed by the clicked point and a point on the line. When the clicked point is 
+    out of range, but still near the projected line, the line will be detected as closer, 
+    but in reality it is not. There is another check to make sure the line is within range 
+    of the clicked point. The pythogoran distane from the clicked point to the line's point 
+    is checked and the shortest is selected as the closest distance to the line.
+
+    @see Referenced: https://wikimedia.org/api/rest_v1/media/math/render/svg/aad3f60fa75c4e1dcbe3c1d3a3792803b6e78bf6
+
+    @params x,y - x, y coordinates fow which to find the closest line
+    @param includeSplines - Wheather to include the control points of splines, deafults to false
+    @return distances, closestLine - tuple
+        distances - An array of distances for all indexes
+        closestline - The x1,y1,x2,y2,index of a line, a list
+
+    """
     global g_new_vertices
+
     #get a list of valid lines
     lines=[]
     prevlineType=None
@@ -504,11 +533,11 @@ def getClosestLine(x,y, includeSplines=False):
     #find distance from point to line
     distances=[]
     for line in lines:
+
+        #unpack line to coordinates
         x1,y1,x2,y2,_=line
-        if x1==x2:
-            grad=math.inf
-        else:
-            grad=(y2-y1)/(x2-x1)
+
+        #normalise points so that x2 and y2 will be larger
         if x1>x2:
             x1,x2=x2,x1
         if y1>y2:
