@@ -481,12 +481,14 @@ def getClosestLine(x,y, includeSplines=False):
     """
     Finds the closest line to a point
 
-    Finds the distance by calculating the perpendicular distance of the line vector to a 
+    First, finds a list of valid lines from the list of vertices in the globals, then,
+    finds the distance by calculating the perpendicular distance of the line vector to a 
     vector fromed by the clicked point and a point on the line. When the clicked point is 
     out of range, but still near the projected line, the line will be detected as closer, 
     but in reality it is not. There is another check to make sure the line is within range 
     of the clicked point. The pythogoran distane from the clicked point to the line's point 
-    is checked and the shortest is selected as the closest distance to the line.
+    is checked and the shortest is selected as the closest distance to the line. The 
+    distances and the closest line is returned.
 
     @see Referenced: https://wikimedia.org/api/rest_v1/media/math/render/svg/aad3f60fa75c4e1dcbe3c1d3a3792803b6e78bf6
 
@@ -499,24 +501,28 @@ def getClosestLine(x,y, includeSplines=False):
     """
     global g_new_vertices
 
-    #get a list of valid lines
+    #initilise array to store lines
     lines=[]
-    prevlineType=None
-    prevVertex=(0,0)
-    indexcount=0
+    
+    prevlineType=None#variable for storing the vertex type
+    prevVertex=(0,0)#stores the previous vertex
+    indexcount=0#stores the current index accessed
 
+    #First, find a list of valid lines
+    #if spline control lines are not included in the search
     if not includeSplines:
-        for vertex in g_new_vertices:
+        for vertex in g_new_vertices:#loop through each vertex
             if vertex[0] ==vertexMarker_line:#if the current vertex is a line
                 if prevlineType==vertexMarker_line or prevlineType==vertexMarker_curveEnd:#check if the previous vertex is also a line or a curve end
-                    lines.append(prevVertex+vertex[1:]+(indexcount,))
-            prevlineType=vertex[0]
-            if vertex[0]!=vertexMarker_End:
-                prevVertex=vertex[1:]
+                    lines.append(prevVertex+vertex[1:]+(indexcount,))#add to the line list
+            prevlineType=vertex[0]#update the line type
+            if vertex[0]!=vertexMarker_End:#if endmarker, add the end point to the start vertex as it is also a line that the user might click on.
+                prevVertex=vertex[1:]#update x, y coords of vertex
             elif g_new_vertices[0][0]==vertexMarker_line:
                 lines.append(prevVertex+g_new_vertices[0][1:]+(len(g_new_vertices)-1,))
             indexcount+=1
     
+    #if spline control lines are included
     else:
         prevVertex=None
         for vertex in g_new_vertices:
@@ -546,35 +552,55 @@ def getClosestLine(x,y, includeSplines=False):
         #print(f"{line} {grad=} {x1-CLOSE_TO_POINT<x<x2+CLOSE_TO_POINT} {y1-CLOSE_TO_POINT<y<y2+CLOSE_TO_POINT}")
 
         #check if point is in range of line
-        if x1-CLOSE_TO_POINT<x<x2+CLOSE_TO_POINT and y1-CLOSE_TO_POINT<y<y2+CLOSE_TO_POINT:
+        if x1-CLOSE_TO_POINT<x<x2+CLOSE_TO_POINT and y1-CLOSE_TO_POINT<y<y2+CLOSE_TO_POINT:#if point clicked is close to the line, use vectors to find distance
             dist=abs((x2-x1)*(y1-y)-(x1-x)*(y2-y1))/math.sqrt((x2-x1)**2+(y2-y1)**2)
             distances.append(dist)
 
-            #if out of range of line, calculate distance to point
+        #if out of range of line, calculate distance to point
         else:
-            dist1=math.sqrt((x1-x)**2+(y1-y)**2)
+            dist1=math.sqrt((x1-x)**2+(y1-y)**2)#pythagorean distance
             dist2=math.sqrt((x2-x)**2+(y2-y)**2)
+
+            #choose the shoprter distance as it is the one closer to the line
             if dist2<dist1:
                 distances.append(dist2)
             else:
                 distances.append(dist1)
-        print(distances[-1])
+    #find the closest line by using the index of the minimum distance
     closestLine = lines[distances.index(min(distances))]
-        
+    
+    #return the distances and the data for the closest line
     return distances, closestLine
 
 def clickhandler_addpoint(x,y):
+    """
+    Adds a vertex into the polygon with a right click.
+
+
+    First, uses previously defined function getClosestLine to find the closest line.
+    Then, finds the gradient of the line.
+    Find the gradient of the perpendicular line, whick would be the negative reciprocial of the graqdient of the line.
+    Solve for x and y intercepts.
+    Add vertex to array of vertices.
+    Redraw polygon.
+    Set cursor on point.
+
+    @param x,y - x,y coordiante of the clicked point
+
+    """
     global g_new_vertices, g_edit_mode
 
+    #only able to add points in edit mode, ignore right clicks in other modes
     if g_edit_mode==editMode_point_edit:
+        #use getClosestLine to get the closest line
         distances,closest_line=getClosestLine(x,y)
-        #print("call",(x,y),distances, closest_line)
 
         #if clicked point is close to a line
         if min(distances)<CLOSE_TO_POINT:
             #calculate closest point on the line
             x1,y1,x2,y2,targetIndex=closest_line
             
+            #special case for horizontal and verticle line, gradient is infinite and 0
             #if horizontal line
             if y1==y2:
                 ly=y1
@@ -584,32 +610,56 @@ def clickhandler_addpoint(x,y):
                 lx=x1
                 ly=y
                 
-            else:
-                m1=(y1-y2)/(x1-x2)
-                m2=-1/m1
-                lx=(m1*x1-m2*x-y1+y)/(m1-m2)
-                ly=m2*(lx-x)+y
+            else:#calculate the gradients
+                m1=(y1-y2)/(x1-x2)#gradient of line
+                m2=-1/m1#grad of perpendicular line
+                lx=(m1*x1-m2*x-y1+y)/(m1-m2)#Solve for x intercept
+                ly=m2*(lx-x)+y#solve for y intercept
+
+            #insert new vertex into array
             g_new_vertices.insert(targetIndex, (vertexMarker_line,lx,ly))
+            #redraw opolygon
             plotPolygon(g_new_vertices)
+            #set cursor on newly created point
             leftclickhandler(lx,ly)
             t.update()
 
 def drawGrid():
+    """
+    Graw the grid.
+    Only availiable in edit mode. 
+    Draws lines in the x and y direction. 
+    Centered at 0,0
+    Gets the size of the screen and draws lines within the screen bounds.
+
+    """
+
+    #get window width and height
     y=sc.window_height()
     x=sc.window_width()
+
+    #distance from center to edge will be half the height and width
     x/=2
     y/=2
+
+    #floor divide the values to find the number of lines and find the start and coordinates
     x_step=int(x//GRIDSIZE*GRIDSIZE)
     y_step=int(y//GRIDSIZE*GRIDSIZE)
+
+    #set color and width of the line
     t.color("#cfcfcf")
     t.width(1)
+    #pen up
     t.pu()
+
+    #plot all lines on the x axis, plot from negative bound, through 0 and to the positive bound
     for linex in range(-x_step, x_step+1, GRIDSIZE):
         t.goto(linex,-y)
         t.pd()
         t.goto(linex,y)
         t.pu()
 
+    #plot all lines on the y axis, plot from negative bound, through 0 and to the positive bound
     for liney in range(-y_step, y_step+1, GRIDSIZE):
         t.goto(-x,liney)
         t.pd()
@@ -618,18 +668,31 @@ def drawGrid():
 
 def drawTransformationTable(tabledata):
     """
-    x,y offset
-    angle offset
-    pattern type
-    shear xy , transform xy, rotate, scale xy, reflection xy
+    Draws table lines first,
+    Then writes table names, data and units
+
+    Transformations availiable are:
     pattern count
+    shear xy , 
+    transform xy, 
+    rotate, 
+    scale xy, 
+    reflection xy
+
+    @param tabledata - list of transformations to plot on the table
+    
     """
     global g_table_bounds
+
+    #CONSTANTS
+    #for table
     CELL_NAME_WIDTH=300
     CELL_DATA_WIDTH=200
     CELL_DATA2_WIDTH=50
     CELL_HEIGHT=30
     FONT=('Courier', 18, 'normal')
+
+    #constant row data
     ROW_DATA=["Pattern count", "Transform pattern X","Transform pattern Y", "Rotate pattern", "Scale pattern X", "Scale pattern Y", "Shear pattern X", "Shear pattern Y", "Reflection", "Line colour", "Fill colour"]
     UNITS_DATA=["", "px","px", "deg", "%", "%", "%", "%", "", "", ""]
     CELLS_Y=len(ROW_DATA)
@@ -639,20 +702,20 @@ def drawTransformationTable(tabledata):
     #draw x grid lines
     t.pu()
     for yline in range(-ypoint,ypoint+1,CELL_HEIGHT):
-        
-        t.goto(-xpoint,yline)
+        #draw from left side to right side
+        t.goto(-xpoint,yline)#left side
         t.pd()
-        t.goto(xpoint,yline)
+        t.goto(xpoint,yline)#right side
         t.pu()
         t.goto(-xpoint+10,yline+5)
 
     #draw y lines
-    totalOffset=0
+    totalOffset=0#draws 4 lines, first one at the extreem left and last on extreem right.
     for i in range(4):
         t.pu()
-        t.goto(-xpoint+totalOffset,-yline)
+        t.goto(-xpoint+totalOffset,-yline)#bottom of table
         t.pd()
-        t.goto(-xpoint+totalOffset,yline)
+        t.goto(-xpoint+totalOffset,yline)#top of table
         if i==0:
             totalOffset+=CELL_NAME_WIDTH
         elif i==1:
@@ -660,7 +723,7 @@ def drawTransformationTable(tabledata):
         else:
             totalOffset+=CELL_DATA2_WIDTH
 
-    #write names and data
+    #write names and data and units
     t.pu()
     starty=ypoint
     for i in range(CELLS_Y):
@@ -674,46 +737,75 @@ def drawTransformationTable(tabledata):
         #print units
         t.goto(-xpoint+CELL_NAME_WIDTH+CELL_DATA_WIDTH+5,starty)
         t.write(UNITS_DATA[i], font=FONT)
+
+    #set table boundries for editing transformation values later
     g_table_bounds=[xpoint, ypoint, CELL_HEIGHT]
 
 def redraw():
+    """
+    Clears the screen, redraws polygons in edit mode and preview mode, draws and redraws transformation table
+
+    Checks the state of the current edit mode
+
+    """
     global g_new_vertices, g_draw_grid_flag, g_edit_mode, g_new_transformation
+
+    #clear the screen
     t.reset()
+
+    #if edit mode
     if g_edit_mode==editMode_point_edit:
-        if g_draw_grid_flag:
+        if g_draw_grid_flag:#check if the grid is needed
             drawGrid()
-        plotPolygon(g_new_vertices)
+        plotPolygon(g_new_vertices)#redraw polygon and hide turtle and update screen
         t.ht()
-    
+
+    #if edit transformations mode
     if g_edit_mode==editMode_transformations:
-        drawTransformationTable(g_new_transformation)
+        drawTransformationTable(g_new_transformation)#redraw transform table with new values
         t.ht()
 
     if g_edit_mode==editMode_preview_transformations:
-        plotPattern(g_new_vertices, g_new_transformation)
-        
+        plotPattern(g_new_vertices, g_new_transformation)#plot polygon with patterns
         t.ht()
+
+    #update screen
     t.update()
 
 def ondraghandler(*coords):
+    """
+    Moves the selected point if any.
+    Checks if snap to grid is anabled, if yes, finds nearest x and y point on the grid and snaps to it.
+
+
+    @params coords - the x and y coordinates that the turtle currently is draged to.
+    """
     global g_new_vertices, g_new_selected_point
 
     #snap to grid
     if g_draw_grid_flag:
-        coords=int(round(coords[0]/GRIDSIZE)*GRIDSIZE),int(round(coords[1]/GRIDSIZE)*GRIDSIZE)
+        coords=int(round(coords[0]/GRIDSIZE)*GRIDSIZE),int(round(coords[1]/GRIDSIZE)*GRIDSIZE)#find the nearest x and y point 
 
     if g_new_selected_point!=-1:
-        g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],)+coords
+        g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],)+coords#update the vertices information
         t.pu()
-        t.goto(*coords)
-        redraw()
+        t.goto(*coords)#goto the selected point
+        redraw()#draw the polygon
 
 def delPointhandler():
+    """
+    Delets a selected point if avaliable and able.
+    Only points that are not part of curves can be deleted, 
+    control points cannot be deleted and must be converted to line before it can be deleted.
+
+    """
     global g_new_vertices, g_new_selected_point, g_edit_mode
 
+    #check if there is a selected line   
+    #makes sure the selected point can be deleted by checking if the point is a line type and the next point is also a line type
     if g_new_selected_point!=-1 and g_new_vertices[g_new_selected_point][0]==vertexMarker_line and g_new_vertices[g_new_selected_point+1][0]==vertexMarker_line or g_new_vertices[g_new_selected_point+1][0]==vertexMarker_End and g_edit_mode==editMode_point_edit:#if point is selected
-        g_new_vertices.pop(g_new_selected_point)#remove polygon
-        #redraw
+        g_new_vertices.pop(g_new_selected_point)#remove polygon from array
+        #redraw tghe polygon
         t.ht()
         redraw()
 
@@ -1277,6 +1369,9 @@ def showHelp(hide=False):
             redraw()
         else:
             showAll()
+
+
+#run setup to setup the window and turtle drawing parameters
 setup()
 
 sc.onclick(leftclickhandler,btn=1)
