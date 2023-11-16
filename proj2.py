@@ -810,35 +810,55 @@ def delPointhandler():
         redraw()
 
 def editPoint():
+    """
+    Handler for the 'e' key being pressed.
+
+    When in edit mode, the user can press 'e' to edit the coordiates of the selected vertex.
+    if there is a vertex selected, a prompt would show to ask the user for the new coordinates. 
+    A sanity check is performed on those requested coordinates and updated if valid. 
+
+    In Preview mode and transformation table mode, It switches to edit mode.
+    """
     global g_new_vertices, g_new_selected_point,g_edit_mode
 
+    #check that there is a selected point and in edit mode
     if g_new_selected_point!=-1 and g_edit_mode==editMode_point_edit:
-        showHelp(1)
-        newCoords = sc.textinput("Edit Point", "Enter new coordinates X,Y:")
+        showHelp(1)#hide help
+        newCoords = sc.textinput("Edit Point", "Enter new coordinates X,Y:")#request for new coordinartes
         sc.listen()#reclaim listener after textinput claimed handler
         if newCoords:
             try:
-                newx,newy = newCoords.split(',')
-                g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],int(newx),int(newy))
-                print(g_new_vertices)
-                redraw()
+                newx,newy = newCoords.split(',')#split the coordinates for into x and y coordinates
+                g_new_vertices[g_new_selected_point]=(g_new_vertices[g_new_selected_point][0],int(newx),int(newy))#update vertex, attempt to convert to integer
+                redraw()#redraw polygojn with new coordinate
             except:
-                t.ht()
+                t.ht()#hide turtle
                 t.goto(-300,-300)
-                t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")
+                t.write("Invalid coordinate entered, please enter coordinates in the format, x,y")#tell user coordinates are invalid
                 t.update()
+    
+    #else switch to edit mode
     elif g_edit_mode!=editMode_point_edit:
         g_edit_mode=editMode_point_edit
-        redraw()
+        redraw()#redraw editing mode
 
 def lineToSpline(vertexIndex):
     """
-    find line, add 2 points at 1/3 and 2/3
+    Find line, add 2 points at 1/3 and 2/3
+    First gets the line data.
+    Then finds the 1/3 and 2/3 coordinates of the line.
+    Adds points to those lines
+    Convert to spline points
+
+    @param vertexIndex - index of vertex in g_new_vertices to convert into spline
     """
 
     global g_new_vertices
+
+    #decrement by 1
     vertexIndex-=1
 
+    #find the line start and end point
     #line points 
     x1,y1=g_new_vertices[vertexIndex][1:3]
 
@@ -848,6 +868,7 @@ def lineToSpline(vertexIndex):
     else:
         x2,y2=g_new_vertices[0][1:3]
 
+    #calculate gradient of not infinity, check that the line is not a verticle line
     if x2 != x1:
         grad=(y2-y1)/(x2-x1)
 
@@ -859,72 +880,109 @@ def lineToSpline(vertexIndex):
 
     #if vert line x1=x2
     if x1==x2:
-        delta=y2-y1
-        clickhandler_addpoint(x1,y1+delta*1/3)
+        delta=y2-y1#chnage in y values
+        clickhandler_addpoint(x1,y1+delta*1/3)#add two vertices
         clickhandler_addpoint(x1,y1+delta*2/3)
 
     #if vert line, y1=y2
     elif y1==y2:
-        delta=x2-x1
-        clickhandler_addpoint(x1+delta*1/3,y1)
+        delta=x2-x1#change in x values
+        clickhandler_addpoint(x1+delta*1/3,y1)#add two vertices
         clickhandler_addpoint(x1+delta*2/3,y1)
 
     #slant line
     else:
+        #find change in x and y
         deltaX=x2-x1
         deltaY=y2-y1
         
         #positive slope
         if grad>0:
-            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)
+            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)#add two vertices
             clickhandler_addpoint(x1+deltaX*2/3,y1+deltaY*2/3)
         #negative slope 
         else:
-            #print(x1,y1)
-            #print(x1+deltaX*1/3,y1+deltaY*1/3)
-            #print(x1+deltaX*2/3,y1+deltaY*2/3)
-            #print(x2,y2)
-            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)
+            clickhandler_addpoint(x1+deltaX*1/3,y1+deltaY*1/3)#add two vertices
             clickhandler_addpoint(x1+deltaX*2/3,y1+deltaY*2/3)
-    #update lines to splines
     
+    #update lines to splines, also update the two new created vertices
     g_new_vertices[vertexIndex+1]=(vertexMarker_curve0,)+g_new_vertices[vertexIndex+1][1:]
     g_new_vertices[vertexIndex+2]=(vertexMarker_curve1,)+g_new_vertices[vertexIndex+2][1:]
     g_new_vertices[vertexIndex+3]=(vertexMarker_curveEnd,)+g_new_vertices[vertexIndex+3][1:]
 
 def splineToLine(vertexIndex):
+    """
+    Convert spline to line
+
+    Get the index of line that is clicked.
+    User can click on start, middle and end of the spline. 
+    Turn all spline segments into lines.
+
+    @param vertexIndex - index of vertex in g_new_vertices to convert into line
+    """
+
+
     global g_new_vertices
     #find points and convert to line
     vertextype= g_new_vertices[vertexIndex][0]
-    if vertextype == vertexMarker_curve0:
+    #check whick type of line the user clicked on.
+    if vertextype == vertexMarker_curve0:#change current and next two into line
         g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
         g_new_vertices[vertexIndex+1]=(vertexMarker_line,)+g_new_vertices[vertexIndex+1][1:]
         g_new_vertices[vertexIndex+2]=(vertexMarker_line,)+g_new_vertices[vertexIndex+2][1:]
-    elif vertextype == vertexMarker_curve1:
+    elif vertextype == vertexMarker_curve1:#chnage current, next one and before one onto line
         g_new_vertices[vertexIndex-1]=(vertexMarker_line,)+g_new_vertices[vertexIndex-1][1:]
         g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
         g_new_vertices[vertexIndex+1]=(vertexMarker_line,)+g_new_vertices[vertexIndex+1][1:]
-    elif vertextype == vertexMarker_curveEnd:
+    elif vertextype == vertexMarker_curveEnd:#change current and before 2 into line
         g_new_vertices[vertexIndex-2]=(vertexMarker_line,)+g_new_vertices[vertexIndex-2][1:]
         g_new_vertices[vertexIndex-1]=(vertexMarker_line,)+g_new_vertices[vertexIndex-1][1:]
         g_new_vertices[vertexIndex]=(vertexMarker_line,)+g_new_vertices[vertexIndex][1:]
-    redraw()
+    redraw()#update and redraw polygon
 
 def splineHandler(*coords):
+    """
+    Call back function for center mouse button.
+
+    Check if in edit mode. 
+    Find the closest line.
+    If line close enough, check line type.
+    If line, turn into spline.
+    If curve, turn into line.
+
+    @param coords - x and y coordinate that is clicked
+    """
     global g_edit_mode, g_new_vertices
+
+    #check if currently in edit mode
     if g_edit_mode == editMode_point_edit:
+
+        #find the closest line
         dist, closestLine =  getClosestLine(*coords, True)
         dist=min(dist)
+
+        #check if line is closer to line. 
         if dist < CLOSE_TO_POINT:
+
+            #get index and line type
             vertexIndex=closestLine[-1]
             vertextype= g_new_vertices[vertexIndex][0]
+
+            #if line
             if vertextype==vertexMarker_End or vertextype== vertexMarker_line:
                 lineToSpline(vertexIndex)
-                print(vertexIndex)
+            
+            #if curve segment
             elif vertextype==vertexMarker_curve0 or vertextype==vertexMarker_curve1 or vertextype==vertexMarker_curveEnd:
                 splineToLine(vertexIndex)
                 
 def toggleGrid():
+    """
+    Callback function for "g" key.
+    Toggles grid on and off
+    Updates polygon
+    """
+
     global g_draw_grid_flag, g_edit_mode
 
     if g_edit_mode==editMode_point_edit:
@@ -933,24 +991,67 @@ def toggleGrid():
     redraw()
 
 def editTransformations():
+    """
+    Callback for 't' key.
+    If currently in transformation table editing, chage to edit mode
+    If currently in edit mode or preview mode, change to trable mode
+    Redraw table or polygon
+    """
+
     global g_edit_mode, g_new_selected_point
+
+    #check if in table mode
     if g_edit_mode==editMode_transformations:
-        g_edit_mode=editMode_point_edit
+        g_edit_mode=editMode_point_edit#change to edit mode
+
+    #else in edit mode or preview mode
     else:
-        g_edit_mode=editMode_transformations
+        g_edit_mode=editMode_transformations#change to table mode
+
+    #redraw table or polygon
     redraw()
 
 def previewPolygons(): 
+    """
+    Callback function for polygon editing. 
+    Checks if in preview mode
+    If in preview mode, change to edit mode.
+    Redraw the correct mode
+    """
     global g_edit_mode, g_new_selected_point
+
+    #if in previiew mode
     if g_edit_mode==editMode_preview_transformations:
-        g_edit_mode=editMode_point_edit
+        g_edit_mode=editMode_point_edit#change to edit mode
+
+    #else in edit mode or transform table mode
     else:
-        g_edit_mode=editMode_preview_transformations
-        
+        g_edit_mode=editMode_preview_transformations#chnage to preview polygon mode
+    
+    #update the polygon preview
     redraw()
 
 def matmul(*mat):
+    """
+    Matrix multiplication for only 3x3 matrices.
+    For each matrix, multiply with IDENTITY matricx for the first operation
+    Multiply with each succesive matrix to get result.
+    Multiplies 2 matrices each time using mat3x3 function.
+    Return result
+
+    @param mat - An array of 3x3 matrices, 
+    @return res - result of the multiplication.
+    """
     def mat3x3(mat1,mat2):
+        """
+        Multiplies two matrices.
+
+        @param mat1 - 3x3 matrix
+        @param mat2 - 3x3 matrix
+        @return retVal - the result of the matrix multiplication
+        """
+
+        #initilise the returnn value array
         retVal=[]
 
         #calculate each row
@@ -962,7 +1063,7 @@ def matmul(*mat):
                 product = 0
                 #calculate products
                 for k in range(3):
-                    product += mat1[i][k]*mat2[k][j]
+                    product += mat1[i][k]*mat2[k][j]#sum each constituent of the products
                 #add int to row
                 row.append(product)
             #add row to result matrix
@@ -978,6 +1079,8 @@ def matmul(*mat):
         [0,1,0],
         [0,0,1]
     ]
+
+    #init array to store resylt matrix
     res=[]
 
     for matrix in mat:
@@ -985,10 +1088,20 @@ def matmul(*mat):
         if not res:
             res=mat3x3(IDENTITY,matrix)
         else:
-            res=mat3x3(res,matrix)
+            res=mat3x3(res,matrix)#for subsequent matrrices, multiply result by anothe matrix
+
+    #return result matrix
     return res
 
 def transMat(a,b):
+    """
+    Takes in x and y translation.
+    Returns a translation matrix
+
+    @param a - X coordinate to translate
+    @param b - Y coordinate to translate
+    @return translation matrix
+    """
     return [
         [1,0,a],
         [0,1,b],
@@ -996,6 +1109,14 @@ def transMat(a,b):
     ]
 
 def rotMat(angle):
+    """
+    Takes in an angle to rotate
+    Convert angle from degrees to radian
+    Calculates rotation matrix and returns rotation matrix
+
+    @param angle - ratation angle in degrees
+    @return rotation matrix
+    """
     angle=math.radians(angle)
     return [
         [math.cos(angle),-math.sin(angle),0],
@@ -1004,6 +1125,16 @@ def rotMat(angle):
     ]
 
 def scaleMat(sx,sy):
+    """
+    Takes in x and y scale.
+    Normalises scale values, 1 for 100%.
+    Returns a scale matrix.
+
+    @param a - X ammount to scale
+    @param b - Y ammount to scale
+    @return scale matrix
+    """
+
     #normalise values
     sx=sx/100
     sy=sy/100
@@ -1015,6 +1146,16 @@ def scaleMat(sx,sy):
     ]
 
 def shearMat(tx,ty):
+    """
+    Takes in x and y shear.
+    Normalises shear values, 0% for no scale.
+    Returns a shear matrix.
+
+    @param a - X ammount to shear
+    @param b - Y ammount to shear
+    @return shear matrix
+    """
+
     tx=tx/100
     ty=ty/100
     return [
@@ -1024,19 +1165,26 @@ def shearMat(tx,ty):
     ]
 
 def reflectMat(reflection):
+    """
+    Takes in reflection.
+    Reflection can be 'X', 'Y', 'XY' or 'None'
 
+    @param reflection - desired reflection
+    @return shear matrix
+    """
+    #if x axis reflection
     if reflection=="X"or reflection=='x':
         rx=-1
         ry=1
-    
+    #y axis reflection
     elif reflection=="Y"or reflection=="y":
         rx=1
         ry=-1
-    
+    #xy axis reflection
     elif reflection.upper()=="XY":
         rx=-1
         ry=-1
-
+    #No rellection, return identity matrix
     else:
         rx=1
         ry=1
@@ -1079,11 +1227,27 @@ def vertexTransformer(Matrix, vertices=g_new_vertices):
         #add to result list
         resultVertices.append((vertex[0],newx,newy))
 
+    #return transformed vertex
     return resultVertices
 
 def plotPattern(new_vertices, new_transformations):
+    """
+    Plots polygons in a pattern. 
+    Finds the number of patterns.
+    FInds the percentage influence on each pattern, then applies it to the transformations.
+    Translation starts from 0
+    Rotation starts from 0
+    Rotation offset set to 0,0, by default
+    Scale starts at 1.0
+    Shear starts from 0.0
+    Rotation is repeted for each rotation pattern
+    
+    @param new_vertices - polygon vertices to plot
+    @param new_transformation - transformations for the polygon
+    """
     global g_new_transformation, g_new_vertices
 
+    #copy values for transformation
     patternCount = new_transformations[0]
     transformX = new_transformations[1]
     transformY = new_transformations[2]
@@ -1096,20 +1260,23 @@ def plotPattern(new_vertices, new_transformations):
     lineCol = new_transformations[9]
     fillCol = new_transformations[10]
 
+    #if rotation offset is not 0, find the offset, rotation and main rotation
     if type(rotation)==str:
-        rotation,coords=rotation.split('C')
-        rotation=int(rotation)
+        rotation,coords=rotation.split('C')#seperate offset from main rotation
+        rotation=int(rotation)#get main rotation
 
-        rotc, coordx, coordy=coords.split(',')
-        rotc, coordx, coordy=int(rotc), int(coordx), int(coordy)
+        rotc, coordx, coordy=coords.split(',')#seperate x,y offsets and sub rotation
+        rotc, coordx, coordy=int(rotc), int(coordx), int(coordy)#convert to int
         rotonC=True
-        print(rotc, coordx, coordy)
+
     else:
         rotonC=False
 
-    
+    #find the difference in scale
     deltaScaleX=scaleX-100
     deltaScaleY=scaleY-100
+
+    #set scale factors
     if deltaScaleX<0:
         scaleXMult=-1
     else:
@@ -1119,8 +1286,10 @@ def plotPattern(new_vertices, new_transformations):
     else:
         scaleYMult=1
 
+    #convert reflections to upper
     reflection=reflection.upper()
 
+    #rotation planes to replace
     if reflection=='NONE':
         reflectionpatterns=['NONE']
     elif reflection=='X':
@@ -1129,13 +1298,16 @@ def plotPattern(new_vertices, new_transformations):
         reflectionpatterns=['NONE','Y']
     elif reflection=='XY':
         reflectionpatterns=['NONE','X','Y','XY']
+
+    #for each reflection
     for reflect in reflectionpatterns:
         #plot first polygon
         firstVertex=vertexTransformer(reflectMat(reflect), new_vertices)
-        plotPolygon(firstVertex,line=lineCol,fill=fillCol)
-        for i in range(patternCount-1):
-            j=(i+1)/(patternCount-1)
+        plotPolygon(firstVertex,line=lineCol,fill=fillCol)#plot first shape
+        for i in range(patternCount-1):#for subsequent shapes
+            j=(i+1)/(patternCount-1)#find the influence of each pattern
 
+            #calculate with scale factor
             if scaleXMult==-1:
                 jX=1-j
             else:
@@ -1145,49 +1317,70 @@ def plotPattern(new_vertices, new_transformations):
                 jY=1-j
             else:
                 jY=j
+            
+            #if rotation offset
             if rotonC:
-                new_vertices=vertexTransformer(transMat(-coordx,-coordy),new_vertices)
-                new_vertices=vertexTransformer(rotMat(rotc*j),new_vertices)
-                new_vertices=vertexTransformer(transMat(coordx,coordy),new_vertices)
+                new_vertices=vertexTransformer(transMat(-coordx,-coordy),new_vertices)#transform to offset
+                new_vertices=vertexTransformer(rotMat(rotc*j),new_vertices)#rotate
+                new_vertices=vertexTransformer(transMat(coordx,coordy),new_vertices)#transform back to origin
 
+            #calculate homofeneous coordiantes
             homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY *j), reflectMat(reflect))
-            #homoCoords=matmul(transMat(transformX*j,transformY*j), scaleMat(10,10))
+            #convert vertices to use include homogeneous coordinates
             transformed_vectors = vertexTransformer(homoCoords,new_vertices)
+            #plot the polygon in the pattern
             plotPolygon(transformed_vectors,line=lineCol,fill=fillCol)
 
 def offsetPolygon():
+    """
+    Move the current working polygon
+    Callback function to the 'o' key
+
+    Check if in edit mode
+    Prompts user for offset to use.
+    If x axis offset, transform x axis and update vertex information.
+    If y axis offset, transform y axis and update vertex information.
+    If rotation, rotate polygon and update vertex information.
+
+    """
     global g_edit_mode, g_new_vertices
 
+    #check to make sure in edit mode
     if g_edit_mode==editMode_point_edit:
         axisToOffset = sc.textinput("Relative offset", "Enter Axis(X)(Y) or rotation(R) to offset:")
         sc.listen()#reclaim listener after textinput claimed handler
 
         while True:
+            #if cancled prompt
             if axisToOffset==None:
                 return
             axisToOffset=axisToOffset.upper()
+            #check that the user input is valid
             if axisToOffset=='X' or axisToOffset=='Y' or axisToOffset=='R':
                 break
-            elif axisToOffset==None:
-                return
-            else:
+
+            else:#if invalid, ask again
                 axisToOffset = sc.textinput("Relative offset", "Enter Axis(X)(Y) or rotation(R) to offset:")
                 sc.listen()#reclaim listener after textinput claimed handler
         if axisToOffset =='X':
             xAxisOffset = sc.textinput("X relative offset", "Enter X axis offset:")
             sc.listen()#reclaim listener after textinput claimed handler
             while True:
+                #if user cancled prompt
                 if xAxisOffset==None:
                     return
                 try:
+                    #check that the user input is valid
                     xAxisOffset=int(xAxisOffset)
+                    #check if transform in range
                     if not -1000<=xAxisOffset<=1000:
                         raise ValueError
                     break
-                except (ValueError,TypeError):
+                except (ValueError,TypeError):#if invalid, ask again
                     xAxisOffset = sc.textinput("X relative offset", "Enter X axis offset(An integer between -1000 and 1000):")
                 sc.listen()#reclaim listener after textinput claimed handler
 
+            #update vertices and redraw
             g_new_vertices=vertexTransformer(transMat(xAxisOffset,0),g_new_vertices)
             redraw()
 
@@ -1195,15 +1388,20 @@ def offsetPolygon():
             yAxisOffset = sc.textinput("Y relative offset", "Enter Y axis offset:")
             sc.listen()#reclaim listener after textinput claimed handler
             while True:
-                try:
+                #if user cancled prompt
+                if yAxisOffset==None:
+                    return
+                try:#check that the user input is valid
                     yAxisOffset=int(yAxisOffset)
+                    #check if transform in range
                     if not -1000<=yAxisOffset<=1000:
                         raise ValueError
                     break
-                except (ValueError,TypeError):
+                except (ValueError,TypeError):#if invalid, ask again
                     yAxisOffset = sc.textinput("Y relative offset", "Enter Y axis offset(An integer between -1000 and 1000):")
                 sc.listen()#reclaim listener after textinput claimed handler
 
+            #update vertices and redraw
             g_new_vertices=vertexTransformer(transMat(0,yAxisOffset),g_new_vertices)
             redraw()
 
@@ -1211,25 +1409,41 @@ def offsetPolygon():
             rotOffset = sc.textinput("Rotation offset", "Enter rotation offset:")
             sc.listen()#reclaim listener after textinput claimed handler
             while True:
-                try:
+                #if user cancled prompt
+                if rotOffset==None:
+                    return
+                try:#check that the user input is valid
                     rotOffset=int(rotOffset)
+                    #check if rotation in range
                     if not -360<=rotOffset<=360:
                         raise ValueError
                     break
-                except (ValueError,TypeError):
+                except (ValueError,TypeError):#if invalid, ask again
                     rotOffset = sc.textinput("Rotationoffset", "Enter rotation offset(An integer between -1000 and 1000):")
                 sc.listen()#reclaim listener after textinput claimed handler
 
+            #update vertices and redraw
             g_new_vertices=vertexTransformer(rotMat(rotOffset),g_new_vertices)
             redraw()
 
 def showHideCoordinates():
+    """
+    Callback function for the 'v' key
+    Shows and hides the values of the vertices.
+
+    Update the flag and update the screen
+    """
     global g_show_values_flag
     g_show_values_flag = not g_show_values_flag
     if g_edit_mode==editMode_point_edit:
         redraw()
 
 def addPolygon():
+    """
+    Add polygon to list of verteicec to plot in the final drawing.
+    Copy the vertex information and the transformation data into the final data list.
+    Ask user to confirm if they want to add polygon
+    """
     global g_all_data, g_new_vertices, g_new_transformation
     axisToOffset = sc.textinput("Confirm add polygon", "Enter (Y) to confirm:")
     sc.listen()#reclaim listener after textinput claimed handler
@@ -1239,79 +1453,122 @@ def addPolygon():
         sc.listen()#reclaim listener after textinput claimed handler
 
 def showAll():
+    """
+    Show all from the final polygon.
+    Reset screen
+    For each polygon,
+    Get their vertices and transformations
+    Plot their pattern
+
+    """
     global g_all_data, g_edit_mode
 
-    showHelp(1)
-    g_edit_mode=editMode_show_result
+    showHelp(1)#hide help
+    g_edit_mode=editMode_show_result#upate edit mode to show result
 
-    print(g_all_data)
-    t.reset()
+    t.reset()#reset all
+
+    #for each polygon pattern, plot the pattern
     for vertices_data, transformation_data in g_all_data:
         plotPattern(vertices_data,transformation_data)
         t.ht()
+    #push to screen
     t.update()        
 
 def saveFile():
+    """
+    Saves a file to drive
+    Checks if there is any data to save to
+    Ask user for file name to save to
+    Parse polygon vertex data and transformation data, 
+    Endode and write to file
+    """
     global g_all_data
 
+    #check if there is data to write
     if g_all_data==[]:
         sc.textinput("Error", "No data to save, add polygons first!")
         sc.listen()#reclaim listener after textinput claimed handler
         return
 
+    #Prompt user for a file name
     saveFileName = sc.textinput("Save File", "Enter save file name:")
     sc.listen()#reclaim listener after textinput claimed handler
 
+    #cjheck if the file name is valid
     while True:
+        #if user closed the prompt
         if saveFileName==None:
             return
         
-        try:
+        try:#try to create file
             saveFileHandle = open(saveFileName,'w')
             break
         
-        except OSError:
+        except OSError:#if the user gave an ivalid file name
             saveFileName = sc.textinput("Save File", "Error creating file.\nEnter save file name:")
             sc.listen()#reclaim listener after textinput claimed handler
 
+    #go through each polygon pattern
     for vertices_data, transformation_data in g_all_data:
+        #accumulator for vertex information
         vertexDataString=''
+        #go through each vertex in the data
         for vertex in vertices_data:
+            #convert to string and add a delimiter
             vertexString=''
+            #for each data point in the vertex
             for i in vertex:
                 i=str(i)
                 vertexString+=i+','
             vertexString=vertexString[:-1]
             vertexDataString+=vertexString+'|'
+        #write to file
         saveFileHandle.write('@'+vertexDataString[:-1]+'\n')
 
+        #initilize the transformation data string
         transDataString=''
+        #go through each data point int the string
         for transform in transformation_data:
             transform=str(transform)
             transDataString+=transform+','
+        #writte to file
         saveFileHandle.write('#'+transDataString[:-1]+'\n')
         saveFileHandle.write('\n')
 
 def openFile():
+    """
+    Ask user for an input file name
+    Check if the file name exists
+    Parse the file data
+    For vertex data, extract data parse into a list of tuples
+    For transformation data parse, into a list
+    For items that can be converted to ont, convert to int, else tray as string
+
+    """
     global g_all_data
+
+    #ask user for the file to input
     openFileName = sc.textinput("Open File", "Enter input file name:")
     sc.listen()#reclaim listener after textinput claimed handler
 
+    #check if the filename is valid
     while True:
-        if openFileName==None:
+        if openFileName==None:#if user cancled the prompt
             return
         
-        try:
+        try:#try to open the file
             openFileHandle = open(openFileName,'r')
             break
         
-        except FileNotFoundError:
+        except FileNotFoundError:#if the file is not found
             openFileName = sc.textinput("Open File", "Error opening file, check file name.\nEnter input file name:")
             sc.listen()#reclaim listener after textinput claimed handler
 
-
+    #clear array
     g_all_data=[]
     while True:
+        #read the vertex data and the transformation data
         vertexData = openFileHandle.readline()
         transData = openFileHandle.readline()
         openFileHandle.readline()#clear newline char
@@ -1324,94 +1581,120 @@ def openFile():
         vertexData=vertexData[1:-1].split('|')
         vertexList=[]
         for vertex in vertexData:
-            vertexRaw= vertex.split(',')
+            vertexRaw= vertex.split(',')#split each data point in the vertex
             vertex=()
             for i in vertexRaw:
-                try:
+                try:#check if the value is a number
                     i=float(i)
                     i=int(i)
-                except ValueError:
+                except ValueError:#else leave as string
                     pass
-                vertex=vertex+(i,)
-            vertexList.append(vertex)
-        print(vertexList)
+                vertex=vertex+(i,)#add to tuple for vertex
+            vertexList.append(vertex)#add to list of vertices
 
+        #split up the data
         transData=transData[1:-1].split(',')
         transList=[]
-        for trans in transData:
+        for trans in transData:#if number, convert to int
             if trans.replace('-','').isnumeric():
                 trans=int(trans)
             transList.append(trans)
-        print(transList)
+        #add to transform list
         g_all_data.append([vertexList,transList])
-    redraw()
+    #redraw and show all transformations
     showAll()
 
 def createNew():
+    """
+    Callback fuction for the 'n' key
+    Allows the user to create a new polygon
+    CLears the existing polygon and reload
+    """
     showHelp(1)
     confirmNew = sc.textinput("Confirm new polygon", "Enter (Y) to confirm:")
     sc.listen()#reclaim listener after textinput claimed handler
     if confirmNew.upper() =='Y':
-        t.reset()
+        t.reset()#clear screen
         t.ht()
-        newPolygon()
+        newPolygon()#copy vertex and transform data
 
 def showHelp(hide=False):
+    """
+    Shows the help for the program
+    Toggles help on and off
+    Callback for the 'h' hey
+    """
     global g_help_menu_flag
+    #if show help
     if g_help_menu_flag==False and not hide:
         g_help_menu_flag=True
-        t.reset()
-        sc.bgpic("help.gif")
+        t.reset()#clear screen
+        sc.bgpic("help.gif")#show help image
+
+    #else, hide help
     else:
         g_help_menu_flag=False
-        sc.bgpic('nopic')
+        sc.bgpic('nopic')#hide image
+
+        #return to mode
         if g_edit_mode!=editMode_show_result:
             redraw()
         else:
             showAll()
 
-
 #run setup to setup the window and turtle drawing parameters
 setup()
 
-sc.onclick(leftclickhandler,btn=1)
-sc.onclick(clickhandler_addpoint,btn=3)
-t.ondrag(ondraghandler)
+#Setup callbacks for the mouse
+sc.onclick(leftclickhandler,btn=1)#left click
+sc.onclick(clickhandler_addpoint,btn=3)#right clcik
+sc.onclick(splineHandler,btn=2)#middle click
+t.ondrag(ondraghandler)#left click and drag
+
+#Setup callbacks for keybaord input
 sc.onkeypress(delPointhandler,'Delete')
+#switch to edit mode, if not in edit mode. If in edit mode, edit selected point coordinates
 sc.onkeypress(editPoint,'e')
 sc.onkeypress(editPoint,'E')
-sc.onclick(splineHandler,btn=2)
+#toggle snap to grid
 sc.onkeypress(toggleGrid,'g')
 sc.onkeypress(toggleGrid,'G')
+#toggle transformation table
 sc.onkeypress(editTransformations,'t')
 sc.onkeypress(editTransformations,'T')
+#Toggle preview polygons
 sc.onkeypress(previewPolygons,'p')
 sc.onkeypress(previewPolygons,'P')
+#offset working polygon
 sc.onkeypress(offsetPolygon,'x')
 sc.onkeypress(offsetPolygon,'X')
+#add polygon to the final pattern 
 sc.onkeypress(addPolygon,'a')
 sc.onkeypress(addPolygon,'A')
+#show hide coordinates
 sc.onkeypress(showHideCoordinates,'v')
 sc.onkeypress(showHideCoordinates,'V')
+#show final polygon patterns
 sc.onkeypress(showAll,'f')
 sc.onkeypress(showAll,'F')
+#save file
 sc.onkeypress(saveFile,'s')
 sc.onkeypress(saveFile,'S')
+#open file
 sc.onkeypress(openFile,'o')
 sc.onkeypress(openFile,'O')
+#new polygon, resets working polygon
 sc.onkeypress(createNew,'n')
 sc.onkeypress(createNew,'N')
+#shows help
 sc.onkeypress(showHelp,'h')
 sc.onkeypress(showHelp,'H')
 
 #show starting polygon
 newPolygon()
 
+#start the listeners and loops to run the program
 t.listen()
 sc.listen()
 t.mainloop()
 sc.mainloop()
-
-
-#todo
-#help menu
