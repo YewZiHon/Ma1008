@@ -31,3 +31,9 @@
 @line,-700,-450|curve0,-850,-450|curve1,-850,-250|curveEnd,-700,-250|line,-700,-300|curve0,-800,-300|curve1,-800,-400|curveEnd,-700,-400|End
 #5,700,0,0C5.-600.-100,100,100,0,0,X,firebrick1,darkorchid1
 
+@line,-850,350|curve0,-750,350|curve1,-750,500|curveEnd,-850,500|line,-900,500|line,-900,350|End
+#8,1200,800,50,50,50,50,50,None,orange,skyblue
+
+@line,-863.0,392.0|curve0,-827.0,388.0|curve1,-807.0,466.0|curveEnd,-854.0,469.0|line,-879.0,470.0|line,-880.0,392.0|End
+#8,1200,800,50,50,50,50,50,None,orange,white
+
