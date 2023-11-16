@@ -1444,6 +1444,7 @@ def addPolygon():
     Copy the vertex information and the transformation data into the final data list.
     Ask user to confirm if they want to add polygon
     """
+    
     global g_all_data, g_new_vertices, g_new_transformation
     axisToOffset = sc.textinput("Confirm add polygon", "Enter (Y) to confirm:")
     sc.listen()#reclaim listener after textinput claimed handler
@@ -1625,6 +1626,7 @@ def showHelp(hide=False):
     Callback for the 'h' hey
     """
     global g_help_menu_flag
+
     #if show help
     if g_help_menu_flag==False and not hide:
         g_help_menu_flag=True
@@ -1692,6 +1694,7 @@ sc.onkeypress(showHelp,'H')
 
 #show starting polygon
 newPolygon()
+showHelp()
 
 #start the listeners and loops to run the program
 t.listen()
