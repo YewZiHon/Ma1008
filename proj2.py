@@ -314,11 +314,11 @@ def leftclickhandler(x,y):
                         if newTransform is None:
                             break
                         newTransform=int(newTransform)#attempt to convert to integer
-                        if newTransform<-1000 or newTransform>1000:
+                        if newTransform<-2000 or newTransform>2000:
                             raise ValueError
                         break
                     except ValueError:
-                        newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -1000 and 1000:")#ask for new transform value with limits
+                        newTransform = sc.textinput("Transform", "Enter new transformation, please enter an integer between -2000 and 2000:")#ask for new transform value with limits
                         sc.listen()#reclaim listener after textinput claimed handler
 
                 #if the user gave a valid value, save to list
@@ -346,7 +346,7 @@ def leftclickhandler(x,y):
                             #split x,y coordinates
                             coords = coords.split(',')
                             #check rotation and coords are in range
-                            if not -360<int(coords[0])<360 or not -1000<int(coords[1])<1000 or not -1000<int(coords[2])<1000:
+                            if not -360<=int(coords[0])<=360 or not -2000<=int(coords[1])<=2000 or not -2000<=int(coords[2])<=2000:
                                 raise ValueError
                         else:
                             #else no center coords
@@ -361,7 +361,7 @@ def leftclickhandler(x,y):
                         
                         break
                     except ValueError:#ask for new rotation with help on how
-                        newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360.\n Enter offsets between -1000 and 1000.\nAngle without offset: 60\nAngle with offset center: 60C60,100,-100")
+                        newrotate = sc.textinput("rotation", "Enter rotation, please enter an integer between -360 and 360.\n Enter offsets between -2000 and 2000.\nAngle without offset: 60\nAngle with offset center: 60C60,100,-100")
                         sc.listen()#reclaim listener after textinput claimed handler
                 
                 #if the user gave a valid value, save to list
@@ -1265,7 +1265,11 @@ def plotPattern(new_vertices, new_transformations):
         rotation,coords=rotation.split('C')#seperate offset from main rotation
         rotation=int(rotation)#get main rotation
 
-        rotc, coordx, coordy=coords.split(',')#seperate x,y offsets and sub rotation
+        #if edit mode
+        try:
+            rotc, coordx, coordy=coords.split(',')#seperate x,y offsets and sub rotation
+        except:#if reading from file
+            rotc, coordx, coordy=coords.split('.')#seperate x,y offsets and sub rotation
         rotc, coordx, coordy=int(rotc), int(coordx), int(coordy)#convert to int
         rotonC=True
 
@@ -1305,7 +1309,7 @@ def plotPattern(new_vertices, new_transformations):
         firstVertex=vertexTransformer(reflectMat(reflect), new_vertices)
         plotPolygon(firstVertex,line=lineCol,fill=fillCol)#plot first shape
         for i in range(patternCount-1):#for subsequent shapes
-            j=(i+1)/(patternCount-1)#find the influence of each pattern
+            j=(i+1)/(patternCount)#find the influence of each pattern
 
             #calculate with scale factor
             if scaleXMult==-1:
@@ -1324,8 +1328,22 @@ def plotPattern(new_vertices, new_transformations):
                 new_vertices=vertexTransformer(rotMat(rotc*j),new_vertices)#rotate
                 new_vertices=vertexTransformer(transMat(coordx,coordy),new_vertices)#transform back to origin
 
+            #factors for reflection for translate
+            if reflect == 'X':
+                xf=-1
+                xy=1
+            elif reflect =='Y':
+                xf=1
+                yf=-1
+            elif reflect=="XY":
+                xf=-1
+                yf=-1
+            else:
+                xf=1
+                yf=1
+
             #calculate homofeneous coordiantes
-            homoCoords=matmul(transMat(transformX*j,transformY*j), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY *j), reflectMat(reflect))
+            homoCoords=matmul(transMat(transformX*j*xf,transformY*j*yf), rotMat(rotation*j), scaleMat(scaleX+deltaScaleX*jX*scaleXMult,scaleY+deltaScaleY*jY*scaleYMult), shearMat(shearX*j, shearY *j), reflectMat(reflect))
             #convert vertices to use include homogeneous coordinates
             transformed_vectors = vertexTransformer(homoCoords,new_vertices)
             #plot the polygon in the pattern
@@ -1531,7 +1549,10 @@ def saveFile():
         transDataString=''
         #go through each data point int the string
         for transform in transformation_data:
-            transform=str(transform)
+            if type(transform)==str:#convert rotation if needed
+                transform=transform.replace(",",".")
+            else:
+                transform=str(transform)
             transDataString+=transform+','
         #writte to file
         saveFileHandle.write('#'+transDataString[:-1]+'\n')
@@ -1636,13 +1657,14 @@ def showHelp(hide=False):
     #else, hide help
     else:
         g_help_menu_flag=False
-        sc.bgpic('nopic')#hide image
+        if sc.bgpic()!='nopic':
+            sc.bgpic('nopic')#hide image
 
-        #return to mode
-        if g_edit_mode!=editMode_show_result:
-            redraw()
-        else:
-            showAll()
+            #return to mode
+            if g_edit_mode!=editMode_show_result:
+                redraw()
+            else:
+                showAll()
 
 #run setup to setup the window and turtle drawing parameters
 setup()
@@ -1655,39 +1677,51 @@ t.ondrag(ondraghandler)#left click and drag
 
 #Setup callbacks for keybaord input
 sc.onkeypress(delPointhandler,'Delete')
+
 #switch to edit mode, if not in edit mode. If in edit mode, edit selected point coordinates
 sc.onkeypress(editPoint,'e')
 sc.onkeypress(editPoint,'E')
+
 #toggle snap to grid
 sc.onkeypress(toggleGrid,'g')
 sc.onkeypress(toggleGrid,'G')
+
 #toggle transformation table
 sc.onkeypress(editTransformations,'t')
 sc.onkeypress(editTransformations,'T')
+
 #Toggle preview polygons
 sc.onkeypress(previewPolygons,'p')
 sc.onkeypress(previewPolygons,'P')
+
 #offset working polygon
 sc.onkeypress(offsetPolygon,'x')
 sc.onkeypress(offsetPolygon,'X')
+
 #add polygon to the final pattern 
 sc.onkeypress(addPolygon,'a')
 sc.onkeypress(addPolygon,'A')
+
 #show hide coordinates
 sc.onkeypress(showHideCoordinates,'v')
 sc.onkeypress(showHideCoordinates,'V')
+
 #show final polygon patterns
 sc.onkeypress(showAll,'f')
 sc.onkeypress(showAll,'F')
+
 #save file
 sc.onkeypress(saveFile,'s')
 sc.onkeypress(saveFile,'S')
+
 #open file
 sc.onkeypress(openFile,'o')
 sc.onkeypress(openFile,'O')
+
 #new polygon, resets working polygon
 sc.onkeypress(createNew,'n')
 sc.onkeypress(createNew,'N')
+
 #shows help
 sc.onkeypress(showHelp,'h')
 sc.onkeypress(showHelp,'H')

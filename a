@@ -1,6 +1,11 @@
 @line,-225,50|line,-175,50|line,-150,0|line,-100,0|line,-175,150|line,-225,150|line,-300,0|line,-250,0|End
-#2,400,0,0,100,100,0,0,None,Blue,red
+#4,-700,0,0,50,50,0,0,None,Blue,pink
 
 @line,-185.0,74.0|line,-200,125|line,-213.0,74.0|End
-#2,400,0,0,100,100,0,0,None,Blue,white
+#4,-700,0,0,50,50,0,0,None,Blue,white
 
+@line,-225,50|line,-175,50|line,-150,0|line,-100,0|line,-175,150|line,-225,150|line,-300,0|line,-250,0|End
+#3,1000,0,0,150,150,0,0,None,Blue,red
+
+@line,-185.0,74.0|line,-200,125|line,-213.0,74.0|End
+#3,1000,0,0,150,150,0,0,None,Blue,white
